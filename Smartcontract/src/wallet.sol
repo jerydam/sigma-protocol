@@ -2,8 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "./IWallet.sol";
-import "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract CompanyWallet is ICompanyWallet {
     address public owner;

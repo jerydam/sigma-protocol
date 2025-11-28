@@ -21,7 +21,7 @@ Traditional multisigs treat every owner equally. Sigma recognizes that in a real
 
   * **Dashboard:** Real-time view of treasury assets, recent activity, and pending proposals.
   * **Proposal System:** Easy-to-use interface to propose transfers, owner additions, or setting changes.
-  * **Token Support:** Native ETH and ERC20 token support.
+  * **Token Support:** Celo and ERC20 token support.
   * **Mass Payouts:** Upload a CSV or manually input a list of addresses to send funds to 50+ people in one click.
   * **Dark Mode:** Fully responsive UI with built-in dark mode.
 

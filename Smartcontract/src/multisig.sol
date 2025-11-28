@@ -2,23 +2,16 @@
 pragma solidity ^0.8.20;
 
 import "./IWallet.sol";
-import "../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
-import "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MultiSigWalletController is ReentrancyGuard {
     // ============ STRUCTS ============
     struct Owner {
-        string name;
+        string ownerName;
         uint256 percentage;   // 1 - 100
         bool exists;
         bool removable;
-    }
-
-    struct OwnerConfig {
-        address[] owners;
-        string[] names;
-        uint256[] percentages;
-        bool[] removable;
     }
 
     struct TransactionRecord {
@@ -35,9 +28,11 @@ contract MultiSigWalletController is ReentrancyGuard {
         uint256 timelockEnd;
     }
 
-    // ============ STATE ============
+    // ============ BATCH STATE ============
     address constant ETH_ADDRESS = address(0);
 
+    // ============ CONFIG STATE ============
+    string public name;
     mapping(address => Owner) public owners;
     address[] public ownerList;
     uint256 public totalPercentage;
@@ -54,7 +49,8 @@ contract MultiSigWalletController is ReentrancyGuard {
     TransactionRecord[] public transactions;
 
     // ============ EVENTS ============
-    event OwnerAdded(address indexed owner, string name, uint256 percentage);
+    event MultiSigNameChanged(string oldName, string newName);
+    event OwnerAdded(address indexed owner, string ownerName, uint256 percentage);
     event OwnerRemoved(address indexed owner, uint256 returnedPercentage);
     event OwnerPercentageChanged(address indexed owner, uint256 oldPct, uint256 newPct);
     event RequiredPercentageChanged(uint256 oldVal, uint256 newVal);
@@ -88,24 +84,31 @@ contract MultiSigWalletController is ReentrancyGuard {
     // ============ CONSTRUCTOR ============
     constructor(
         address _companyWallet,
-        OwnerConfig memory config,
+        string memory _name,
+        address[] memory _initialOwners,
+        string[] memory _initialNames,
+        uint256[] memory _initialPercentages,
+        bool[] memory _initialRemovable,
         uint256 _requiredPercentage,
         uint256 _timelockPeriod,
         uint256 _expiryPeriod,
         uint256 _minOwners
     ) {
         require(_companyWallet != address(0), "Invalid wallet");
-        require(config.owners.length >= 2, "Min 2 owners");
+        require(bytes(_name).length > 0, "Empty name");
+        require(_initialOwners.length >= 2, "Min 2 owners");
         require(
-            config.owners.length == config.names.length &&
-            config.owners.length == config.percentages.length &&
-            config.owners.length == config.removable.length,
+            _initialOwners.length == _initialNames.length &&
+            _initialOwners.length == _initialPercentages.length &&
+            _initialOwners.length == _initialRemovable.length,
             "Array mismatch"
         );
 
         deployer = msg.sender;
         companyWallet = ICompanyWallet(_companyWallet);
+        name = _name;
 
+        // Config
         require(_requiredPercentage > 0 && _requiredPercentage <= 100, "Invalid req%");
         require(_minOwners >= 2, "minOwners >= 2");
         require(_expiryPeriod > 0, "expiry > 0");
@@ -115,18 +118,19 @@ contract MultiSigWalletController is ReentrancyGuard {
         expiryPeriod       = _expiryPeriod;
         minOwners          = _minOwners;
 
-        for (uint256 i = 0; i < config.owners.length; i++) {
-            address ownerAddr = config.owners[i];
+        // Add owners
+        for (uint256 i = 0; i < _initialOwners.length; i++) {
+            address ownerAddr = _initialOwners[i];
             require(ownerAddr != address(0) && ownerAddr != deployer, "Invalid owner");
             require(!owners[ownerAddr].exists, "Duplicate");
-            require(bytes(config.names[i]).length > 0, "Empty name");
-            uint256 pct = config.percentages[i];
+            require(bytes(_initialNames[i]).length > 0, "Empty name");
+            uint256 pct = _initialPercentages[i];
             require(pct > 0 && pct <= 100, "Invalid %");
 
             totalPercentage += pct;
-            owners[ownerAddr] = Owner(config.names[i], pct, true, config.removable[i]);
+            owners[ownerAddr] = Owner(_initialNames[i], pct, true, _initialRemovable[i]);
             ownerList.push(ownerAddr);
-            emit OwnerAdded(ownerAddr, config.names[i], pct);
+            emit OwnerAdded(ownerAddr, _initialNames[i], pct);
         }
         require(totalPercentage <= 100, "Total > 100");
     }
@@ -319,6 +323,19 @@ contract MultiSigWalletController is ReentrancyGuard {
         return transactions[txId].confirmationCount >= requiredPercentage;
     }
 
+    // ============ NAME MANAGEMENT ============
+    function changeNameInternal(string calldata newName) external whenNotPaused {
+        require(msg.sender == address(this), "Only self");
+        require(bytes(newName).length > 0, "Empty name");
+        emit MultiSigNameChanged(name, newName);
+        name = newName;
+    }
+
+    function submitChangeName(string calldata newName) external onlyOwner returns (uint256) {
+        return _submit(address(this), 0, false, address(0),
+            abi.encodeWithSelector(this.changeNameInternal.selector, newName));
+    }
+
     // ============ ADMIN FUNCTIONS (via proposal) ============
     function changeRequiredPercentageInternal(uint256 v) external whenNotPaused validPercentage(v) {
         require(msg.sender == address(this), "Only self");
@@ -368,45 +385,45 @@ contract MultiSigWalletController is ReentrancyGuard {
     }
 
     // ============ OWNER MANAGEMENT ============
-    function _addOwnerInternal(address addr, string memory name, uint256 pct, bool removable) internal {
+    function _addOwnerInternal(address addr, string memory ownerName, uint256 pct, bool removable) internal {
         require(!owners[addr].exists, "Exists");
         require(totalPercentage + pct <= 100, "Sum > 100");
-        owners[addr] = Owner(name, pct, true, removable);
+        owners[addr] = Owner(ownerName, pct, true, removable);
         ownerList.push(addr);
         totalPercentage += pct;
-        emit OwnerAdded(addr, name, pct);
+        emit OwnerAdded(addr, ownerName, pct);
     }
 
-    function addOwnerInternal(address newOwner, string calldata name, uint256 percentage, bool removable)
+    function addOwnerInternal(address newOwner, string calldata ownerName, uint256 percentage, bool removable)
         external whenNotPaused {
         require(msg.sender == address(this), "Only self");
-        _addOwnerInternal(newOwner, name, percentage, removable);
+        _addOwnerInternal(newOwner, ownerName, percentage, removable);
     }
 
-    function submitAddOwner(address newOwner, string calldata name, uint256 pct, bool removable)
+    function submitAddOwner(address newOwner, string calldata ownerName, uint256 pct, bool removable)
         external onlyOwner returns (uint256) {
         return _submit(address(this), 0, false, address(0),
-            abi.encodeWithSelector(this.addOwnerInternal.selector, newOwner, name, pct, removable));
+            abi.encodeWithSelector(this.addOwnerInternal.selector, newOwner, ownerName, pct, removable));
     }
 
     // ============ VIEW FUNCTIONS ============
     function getOwners()
         external view returns (
             address[] memory addrs,
-            string[] memory names,
+            string[] memory ownerName,
             uint256[] memory percentages,
             bool[] memory removable
         ) {
         uint256 len = ownerList.length;
         addrs = new address[](len);
-        names = new string[](len);
+        ownerName = new string[](len);
         percentages = new uint256[](len);
         removable = new bool[](len);
         for (uint256 i = 0; i < len; i++) {
             address a = ownerList[i];
             Owner memory o = owners[a];
             addrs[i] = a;
-            names[i] = o.name;
+            ownerName[i] = o.ownerName;
             percentages[i] = o.percentage;
             removable[i] = o.removable;
         }
