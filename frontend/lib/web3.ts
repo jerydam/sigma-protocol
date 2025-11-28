@@ -25,7 +25,7 @@ export async function initializeProvider() {
   return { provider, signer };
 }
 
-export const MULTISIG_FACTORY_ADDRESS = '0xc645B1C83A122672477fa9921Ef74d62e6035eb7' as const;
+export const MULTISIG_FACTORY_ADDRESS = '0x0995C06E2fb2d059F3534608176858406f6bE95F' as const;
 
 export function getProvider() {
   if (!provider) throw new Error('Provider not initialized');

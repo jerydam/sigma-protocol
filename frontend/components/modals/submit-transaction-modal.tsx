@@ -249,7 +249,7 @@ export function SubmitTransactionModal({
                    <div className={`p-2 rounded-full ${assetType === 'eth' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                       <Coins className="h-5 w-5" />
                    </div>
-                   <span className="font-medium text-sm">Native ETH</span>
+                   <span className="font-medium text-sm">Celo</span>
                 </div>
                 
                 <div 

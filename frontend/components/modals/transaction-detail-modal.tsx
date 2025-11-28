@@ -84,7 +84,7 @@ export function TransactionDetailModal({
             <div>
                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Operation Type</p>
                <p className="font-medium text-sm flex items-center gap-2">
-                  {transaction.isTokenTransfer ? 'ERC20 Token Transfer' : transaction.data !== '0x' ? 'Contract Interaction' : 'Native ETH Transfer'}
+                  {transaction.isTokenTransfer ? 'ERC20 Token Transfer' : transaction.data !== '0x' ? 'Contract Interaction' : 'Celo Transfer'}
                </p>
             </div>
 
