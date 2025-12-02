@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   X, Send, Loader2, AlertCircle, Upload, FileText, Trash2, 
-  UserPlus, Coins, Wallet, Users, ArrowRight, CheckCircle2 
+  UserPlus, Coins, Wallet, Users, ArrowRight, CheckCircle2, 
+  Settings, Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,14 +27,38 @@ import {
   submitBatchTransferDifferent,
   submitAddOwner
 } from '@/lib/web3';
-import { ethers } from 'ethers';
+import { ethers, Interface } from 'ethers';
 
-// Common Tokens
+// --- CONFIGURATION CONSTANTS ---
+
+// Common Tokens (using Celo testnet addresses for demonstration)
 const TOKEN_OPTIONS = [
-  { name: 'USDC (Testnet)', symbol: 'USDC', address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e' },
+  { name: 'cUSD (Testnet)', symbol: 'cUSD', address: '0x874068565b93198084D1f6874E2f768E6B1516e8' },
+  { name: 'cEUR (Testnet)', symbol: 'cEUR', address: '0x10c6609C0637B194e823A449b2c3a51D1415fF78' },
   { name: 'WETH', symbol: 'WETH', address: '0x4200000000000000000000000000000000000006' },
   { name: 'Custom Token', symbol: '???', address: 'custom' },
 ];
+
+// Simplified DEX Platform Configuration (using placeholder/example addresses)
+const DEX_PLATFORMS = [
+    { 
+        name: 'Uniswap (Celo)', 
+        address: '0x62a8F0D03F66D6C655d81C9d3163E5d39A1e2226', // Example Uniswap Router on Celo
+        abi: [ 
+            "function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) returns (uint[] memory amounts)",
+            "function swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline) returns (uint[] memory amounts)",
+        ]
+    },
+    { 
+        name: 'Ubeswap (Celo)', 
+        address: '0x44760E45c711a37c4A462137F8E4d4d122245b63', // Example Ubeswap Router
+        abi: [ 
+            "function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) returns (uint[] memory amounts)"
+        ]
+    },
+];
+
+// --- INTERFACES ---
 
 interface SubmitTransactionModalProps {
   isOpen: boolean;
@@ -41,6 +66,51 @@ interface SubmitTransactionModalProps {
   controllerAddress: string;
   defaultTab?: 'transfer' | 'custom' | 'owner';
 }
+
+// --- CALCDATA GENERATION FUNCTION (CONCEPTUAL) ---
+
+/**
+ * A conceptual function to generate calldata for a simple exact token swap.
+ * NOTE: Real-world DEX routers often require complex path encoding and approval first.
+ * This function is a simplified demo for the structure.
+ * @param platform The DEX Router contract configuration.
+ * @param tokenInAddress Address of the token being sold.
+ * @param tokenOutAddress Address of the token being bought.
+ * @param amountIn Amount of tokenIn (in base units, e.g., Wei).
+ * @param recipient The address that receives the tokens (the controller).
+ * @returns Calldata hex string.
+ */
+const generateSwapCalldata = (
+    platform: typeof DEX_PLATFORMS[0], 
+    tokenInAddress: string, 
+    tokenOutAddress: string, 
+    amountIn: string, 
+    recipient: string
+): string => {
+    try {
+        const routerInterface = new Interface(platform.abi);
+        
+        // This is a simplified path array for direct swap
+        const path = [tokenInAddress, tokenOutAddress]; 
+        const deadline = Math.floor(Date.now() / 1000) + (60 * 30); // 30 minutes from now
+        const amountOutMin = 0; // Use 0 for demo, should be calculated for slippage in production
+
+        const calldata = routerInterface.encodeFunctionData("swapExactTokensForTokens", [
+            amountIn,     // amountIn (exact amount being sold)
+            amountOutMin, // amountOutMin (minimum to accept)
+            path,         // path (tokenIn -> tokenOut)
+            recipient,    // recipient (the safe/controller)
+            deadline,     // deadline
+        ]);
+
+        return calldata;
+
+    } catch (e) {
+        console.error("Calldata generation error:", e);
+        throw new Error("Failed to generate swap calldata. Check token addresses.");
+    }
+};
+
 
 export function SubmitTransactionModal({ 
   isOpen, 
@@ -64,10 +134,16 @@ export function SubmitTransactionModal({
   const [amounts, setAmounts] = useState('');       
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   
-  // Custom
+  // Custom (Now simplified to only hold the final transaction output)
   const [customTo, setCustomTo] = useState('');
   const [customValue, setCustomValue] = useState('0');
   const [customData, setCustomData] = useState('0x');
+
+  // DeFi Swap Form State (The only input in the "custom" tab)
+  const [defiPlatform, setDefiPlatform] = useState<string>(DEX_PLATFORMS[0].address);
+  const [tokenIn, setTokenIn] = useState<string>(TOKEN_OPTIONS[0].address);
+  const [tokenOut, setTokenOut] = useState<string>(TOKEN_OPTIONS[1].address);
+  const [swapAmount, setSwapAmount] = useState<string>('');
 
   // Add Owner
   const [newOwnerName, setNewOwnerName] = useState('');
@@ -78,10 +154,59 @@ export function SubmitTransactionModal({
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // --- Effects ---
+
   // Reset on open
   useEffect(() => {
-    if (isOpen) setMode(defaultTab);
+    if (isOpen) {
+      setMode(defaultTab);
+    }
   }, [isOpen, defaultTab]);
+
+  // Handle DeFi Swap Calldata Generation
+  useEffect(() => {
+    if (mode !== 'custom') return;
+
+    // Reset Advanced fields when swap form changes
+    setCustomTo('');
+    setCustomValue('0');
+    setCustomData('0x');
+    
+    // Check for minimum inputs
+    if (!defiPlatform || !tokenIn || !tokenOut || !swapAmount || swapAmount === '0') {
+        setError("Fill out all swap fields to generate the transaction.");
+        return;
+    }
+
+    try {
+        const platform = DEX_PLATFORMS.find(p => p.address === defiPlatform);
+        if (!platform) throw new Error("Invalid platform selected.");
+        
+        // **IMPORTANT**: Convert float string to BigNumber string (Wei)
+        const parsedAmount = ethers.parseEther(swapAmount).toString();
+
+        const calldata = generateSwapCalldata(
+            platform, 
+            tokenIn, 
+            tokenOut, 
+            parsedAmount, 
+            controllerAddress // The safe/controller is the recipient of the bought tokens
+        );
+
+        // Update the Advanced Fields (automatically)
+        setCustomTo(defiPlatform);
+        // Value is 0 unless swapping ETH, which is not supported in this simplified token swap function
+        setCustomValue('0'); 
+        setCustomData(calldata);
+        setError(null);
+
+    } catch (e: any) {
+        setError(e.message || "Could not auto-generate swap transaction. Check inputs.");
+        setCustomTo('');
+        setCustomData('0x');
+    }
+  }, [defiPlatform, tokenIn, tokenOut, swapAmount, mode, controllerAddress]);
+
 
   if (!isOpen) return null;
 
@@ -99,8 +224,9 @@ export function SubmitTransactionModal({
     return list.reduce((acc, val) => acc + (parseFloat(val) || 0), 0).toFixed(4);
   };
 
-  // --- File Handler ---
+  // --- File Handler (Unchanged) ---
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // ... (File upload logic remains unchanged)
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -160,7 +286,7 @@ export function SubmitTransactionModal({
     setError(null);
   };
 
-  // --- Submit Logic ---
+  // --- Submit Logic (Updated for 'custom' simplification) ---
   const handleSubmit = async () => {
     setError(null);
     setIsPending(true);
@@ -172,8 +298,11 @@ export function SubmitTransactionModal({
         if (!newOwnerName) throw new Error("Name required");
         await submitAddOwner(controllerAddress, newOwnerAddress, newOwnerName, Number(newOwnerPct), newOwnerRemovable);
       } 
-      // 2. Custom
+      // 2. Custom (DeFi Swap)
       else if (mode === 'custom') {
+        if (customData === '0x') {
+            throw new Error("Transaction data is incomplete. Please check the swap inputs.");
+        }
         await submitTransaction(controllerAddress, customTo, customValue || '0', false, ethers.ZeroAddress, customData || '0x');
       } 
       // 3. Transfer
@@ -204,7 +333,7 @@ export function SubmitTransactionModal({
         }
       }
       onClose();
-      window.location.reload();
+      // window.location.reload(); 
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Failed to submit transaction');
@@ -212,6 +341,11 @@ export function SubmitTransactionModal({
       setIsPending(false);
     }
   };
+
+  // Filter token options for 'token out' to ensure they aren't the same as 'token in'
+  const tokenOutOptions = TOKEN_OPTIONS.filter(t => t.address !== tokenIn);
+  const tokenInOptions = TOKEN_OPTIONS.filter(t => t.address !== tokenOut);
+
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -234,14 +368,14 @@ export function SubmitTransactionModal({
             <TabsList className="grid w-full grid-cols-3 mb-6">
               <TabsTrigger value="transfer" className="gap-2"><Wallet className="h-4 w-4"/> Transfer</TabsTrigger>
               <TabsTrigger value="owner" className="gap-2"><Users className="h-4 w-4"/> Add Owner</TabsTrigger>
-              <TabsTrigger value="custom" className="gap-2"><FileText className="h-4 w-4"/> Advanced</TabsTrigger>
+              <TabsTrigger value="custom" className="gap-2"><Zap className="h-4 w-4"/> DeFi Swap</TabsTrigger> {/* Renamed Advanced tab */}
             </TabsList>
 
             {/* ================= TRANSFER TAB ================= */}
             <TabsContent value="transfer" className="space-y-6 animate-in slide-in-from-left-2 duration-300">
-              
-              {/* 1. Asset Selection Cards */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* (Transfer content remains here) */}
+               {/* 1. Asset Selection Cards */}
+               <div className="grid grid-cols-2 gap-4">
                 <div 
                   className={`cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center gap-2 transition-all ${assetType === 'eth' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
                   onClick={() => setAssetType('eth')}
@@ -392,6 +526,7 @@ export function SubmitTransactionModal({
 
             {/* ================= OWNER TAB ================= */}
             <TabsContent value="owner" className="space-y-5 animate-in slide-in-from-right-2 duration-300">
+              {/* (Owner content remains here) */}
               <div className="flex items-start gap-3 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
                  <UserPlus className="h-5 w-5 text-blue-600 mt-0.5" />
                  <div className="text-sm text-blue-900 dark:text-blue-200">
@@ -427,36 +562,104 @@ export function SubmitTransactionModal({
               </div>
             </TabsContent>
 
-            {/* ================= CUSTOM TAB ================= */}
+            {/* ================= CUSTOM/DEFI SWAP TAB ================= */}
             <TabsContent value="custom" className="space-y-4 animate-in fade-in">
-                <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl flex items-start gap-3">
-                   <AlertCircle className="h-5 w-5 text-orange-600" />
-                   <div className="text-sm">
-                      <p className="font-semibold text-orange-800 dark:text-orange-400">Advanced Mode</p>
-                      <p className="text-orange-700/80 dark:text-orange-300/80 text-xs mt-1">
-                        Execute raw function calls on external contracts. Verify calldata carefully.
-                      </p>
-                   </div>
+                
+                <div className="space-y-4 p-4 border rounded-lg bg-primary/5 animate-in fade-in">
+                    <p className="font-semibold flex items-center gap-2"><Zap className="h-5 w-5"/> Automated Token Swap</p>
+                    
+                    <div className="space-y-2">
+                        <Label>Select Platform</Label>
+                        <Select value={defiPlatform} onValueChange={setDefiPlatform}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a DEX..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {DEX_PLATFORMS.map((p) => (
+                                    <SelectItem key={p.address} value={p.address}>{p.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="col-span-1 space-y-2">
+                            <Label>Amount</Label>
+                            <Input type="number" placeholder="10.00" value={swapAmount} onChange={(e) => setSwapAmount(e.target.value)} />
+                        </div>
+                        <div className="col-span-2 space-y-2">
+                            <Label>Token In (To Sell)</Label>
+                            <Select value={tokenIn} onValueChange={setTokenIn}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select Token In..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {tokenInOptions.map((t) => <SelectItem key={t.address} value={t.address}>{t.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-center">
+                        <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <Label>Token Out (To Buy)</Label>
+                        <Select value={tokenOut} onValueChange={setTokenOut}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select Token Out..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {tokenOutOptions.map((t) => <SelectItem key={t.address} value={t.address}>{t.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    
+                    <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded text-xs text-yellow-800 dark:text-yellow-300">
+                        NOTE: This only generates the **swap call**. You must submit a separate **Approval** transaction if the contract isn't already approved to spend the **Token In** amount.
+                    </div>
                 </div>
-                <div className="space-y-3">
-                   <div className="space-y-1">
-                      <Label>Target Contract</Label>
-                      <Input placeholder="0x..." value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
-                   </div>
-                   <div className="space-y-1">
-                      <Label>Value (ETH)</Label>
-                      <Input type="number" value={customValue} onChange={(e) => setCustomValue(e.target.value)} />
-                   </div>
-                   <div className="space-y-1">
-                      <Label>Calldata (Hex)</Label>
-                      <Textarea 
-                         placeholder="0x..." 
-                         value={customData} 
-                         onChange={(e) => setCustomData(e.target.value)} 
-                         className="font-mono text-xs min-h-[100px]"
-                      />
-                   </div>
+
+                {/* --- GENERATED TRANSACTION DETAILS (READ-ONLY) --- */}
+                <div className="space-y-4 pt-2">
+                    <div className="space-y-1">
+                       <Label>Target Contract</Label>
+                       <Input 
+                          value={customTo} 
+                          readOnly 
+                          className="bg-muted font-mono text-sm"
+                          placeholder="Platform Address (0x...)"
+                       />
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="col-span-1 space-y-1">
+                           <Label>Value (Celo)</Label>
+                           <Input 
+                              type="text" // Use text to avoid number formatting issues
+                              value={customValue} 
+                              readOnly 
+                              className="bg-muted font-mono text-sm"
+                           />
+                        </div>
+                        <div className="col-span-2 space-y-1">
+                            <Label>Calldata Status</Label>
+                            <div className={`p-2 rounded text-xs text-center font-semibold ${customData === '0x' ? 'bg-red-500/10 text-red-600 border border-red-500/20' : 'bg-green-500/10 text-green-600 border border-green-500/20'}`}>
+                                {customData === '0x' ? 'Awaiting Input' : 'Calldata Generated'}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="space-y-1">
+                       <Label>Calldata (Function Call)</Label>
+                       <Textarea 
+                          value={customData} 
+                          readOnly 
+                          className="font-mono text-xs min-h-[100px] bg-muted break-all"
+                          placeholder="Generated calldata (0x...)"
+                       />
+                    </div>
                 </div>
+
             </TabsContent>
           </Tabs>
         </div>
@@ -490,7 +693,8 @@ export function SubmitTransactionModal({
             <Button variant="outline" className="flex-1" onClick={onClose} disabled={isPending}>
               Cancel
             </Button>
-            <Button className="flex-[2]" onClick={handleSubmit} disabled={isPending}>
+            {/* Disable submission if pending or if in custom mode with no generated data */}
+            <Button className="flex-[2]" onClick={handleSubmit} disabled={isPending || (mode === 'custom' && customData === '0x')}>
               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
               Submit Proposal
             </Button>

@@ -95,8 +95,8 @@ export function NetworkSwitchModal() {
             chainId: CELO_SEPOLIA_HEX,
             chainName: 'Celo Sepolia',
             nativeCurrency: {
-              name: 'Ether',
-              symbol: 'ETH',
+              name: 'Celo',
+              symbol: 'CELO',
               decimals: 18,
             },
             rpcUrls: ['https://forno.celo-sepolia.celo-testnet.org'], 
