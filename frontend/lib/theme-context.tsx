@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'light' | 'dark' | 'system';
+type Theme = 'dark' | 'light' | 'system';
 
 interface ThemeContextType {
   theme: Theme;
@@ -13,67 +13,72 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('system');
-  const [isDark, setIsDark] = useState(false);
+  // 1. Set 'dark' as the initial default state
+  const [theme, setThemeState] = useState<Theme>('dark');
+  const [isDark, setIsDark] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
-  // Initialize theme from localStorage and system preference
+  const calculateIsDark = (t: Theme): boolean => {
+    if (t === 'dark') return true;
+    if (t === 'light') return false;
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return true; // Default to dark during SSR
+  };
+
   useEffect(() => {
-    const storedTheme = (localStorage.getItem('theme') as Theme) || 'system';
+    // 2. Hydrate from localStorage on mount
+    const storedTheme = (localStorage.getItem('theme') as Theme) || 'dark';
     setThemeState(storedTheme);
+    
+    const initialIsDark = calculateIsDark(storedTheme);
+    setIsDark(initialIsDark);
+    
+    // Apply class to HTML immediately
+    if (initialIsDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
 
-    const updateTheme = (newTheme: Theme) => {
-      const isDarkMode =
-        newTheme === 'dark' ||
-        (newTheme === 'system' &&
-          window.matchMedia('(prefers-color-scheme: dark)').matches);
+    setMounted(true);
 
-      setIsDark(isDarkMode);
-
-      if (isDarkMode) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    };
-
-    updateTheme(storedTheme);
-
-    // Listen to system theme changes
+    // Listener for system changes
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = () => {
-      const currentTheme = (localStorage.getItem('theme') as Theme) || 'system';
-      if (currentTheme === 'system') {
-        updateTheme('system');
+      const current = localStorage.getItem('theme') as Theme;
+      if (!current || current === 'system') {
+        const dark = mediaQuery.matches;
+        setIsDark(dark);
+        document.documentElement.classList.toggle('dark', dark);
       }
     };
 
     mediaQuery.addEventListener('change', handleChange);
-
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
     localStorage.setItem('theme', newTheme);
-
-    const isDarkMode =
-      newTheme === 'dark' ||
-      (newTheme === 'system' &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-    setIsDark(isDarkMode);
-
-    if (isDarkMode) {
+    
+    const dark = calculateIsDark(newTheme);
+    setIsDark(dark);
+    
+    if (dark) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
   };
 
-  // Always provide the context, even before mounted
   return (
     <ThemeContext.Provider value={{ theme, setTheme, isDark }}>
-      {children}
+      {/* 3. We wrap the children to ensure they only render with the correct theme info */}
+      <div style={{ visibility: mounted ? 'visible' : 'hidden' }}>
+        {children}
+      </div>
     </ThemeContext.Provider>
   );
 }

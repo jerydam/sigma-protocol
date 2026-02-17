@@ -1,107 +1,11 @@
-export const MULTISIG_CONTROLLER_ABI =[
+export const MULTISIG_CONTROLLER_ABI = [
 	{
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "newOwner",
+				"name": "_creator",
 				"type": "address"
 			},
-			{
-				"internalType": "string",
-				"name": "ownerName",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "percentage",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bool",
-				"name": "removable",
-				"type": "bool"
-			}
-		],
-		"name": "addOwnerInternal",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-        "inputs": [
-            { "internalType": "address", "name": "to", "type": "address" },
-            { "internalType": "uint256", "name": "value", "type": "uint256" },
-            { "internalType": "bool", "name": "isTokenTransfer", "type": "bool" },
-            { "internalType": "address", "name": "tokenAddress", "type": "address" },
-            { "internalType": "bytes", "name": "data", "type": "bytes" }
-        ],
-        "name": "submitTransaction",
-        "outputs": [{ "internalType": "uint256", "name": "txId", "type": "uint256" }],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            { "internalType": "address", "name": "token", "type": "address" },
-            { "internalType": "address[]", "name": "recipients", "type": "address[]" },
-            { "internalType": "uint256[]", "name": "amounts", "type": "uint256[]" }
-        ],
-        "name": "submitBatchTransferDifferent",
-        "outputs": [{ "internalType": "uint256", "name": "txId", "type": "uint256" }],
-        "stateMutability": "payable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            { "internalType": "address", "name": "token", "type": "address" },
-            { "internalType": "address[]", "name": "recipients", "type": "address[]" },
-            { "internalType": "uint256", "name": "amountPer", "type": "uint256" }
-        ],
-        "name": "submitBatchTransferEqual",
-        "outputs": [{ "internalType": "uint256", "name": "txId", "type": "uint256" }],
-        "stateMutability": "payable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            { "internalType": "address", "name": "newOwner", "type": "address" },
-            { "internalType": "string", "name": "ownerName", "type": "string" },
-            { "internalType": "uint256", "name": "pct", "type": "uint256" },
-            { "internalType": "bool", "name": "removable", "type": "bool" }
-        ],
-        "name": "submitAddOwner",
-        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "v",
-				"type": "uint256"
-			}
-		],
-		"name": "changeExpiryPeriodInternal",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "v",
-				"type": "uint256"
-			}
-		],
-		"name": "changeMinOwnersInternal",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
 			{
 				"internalType": "address",
 				"name": "_companyWallet",
@@ -131,6 +35,11 @@ export const MULTISIG_CONTROLLER_ABI =[
 				"internalType": "bool[]",
 				"name": "_initialRemovable",
 				"type": "bool[]"
+			},
+			{
+				"internalType": "address",
+				"name": "_factory",
+				"type": "address"
 			},
 			{
 				"internalType": "uint256",
@@ -187,58 +96,6 @@ export const MULTISIG_CONTROLLER_ABI =[
 		"type": "event"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "newName",
-				"type": "string"
-			}
-		],
-		"name": "changeNameInternal",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "v",
-				"type": "uint256"
-			}
-		],
-		"name": "changeRequiredPercentageInternal",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "v",
-				"type": "uint256"
-			}
-		],
-		"name": "changeTimelockPeriodInternal",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "txId",
-				"type": "uint256"
-			}
-		],
-		"name": "confirmTransaction",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
 		"anonymous": false,
 		"inputs": [],
 		"name": "ContractPaused",
@@ -249,65 +106,6 @@ export const MULTISIG_CONTROLLER_ABI =[
 		"inputs": [],
 		"name": "ContractUnpaused",
 		"type": "event"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "token",
-				"type": "address"
-			},
-			{
-				"internalType": "address[]",
-				"name": "recipients",
-				"type": "address[]"
-			},
-			{
-				"internalType": "uint256[]",
-				"name": "amounts",
-				"type": "uint256[]"
-			}
-		],
-		"name": "executeBatchDifferent",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "token",
-				"type": "address"
-			},
-			{
-				"internalType": "address[]",
-				"name": "recipients",
-				"type": "address[]"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amountPer",
-				"type": "uint256"
-			}
-		],
-		"name": "executeBatchEqual",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "txId",
-				"type": "uint256"
-			}
-		],
-		"name": "executeTransactionManual",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
 	},
 	{
 		"anonymous": false,
@@ -436,13 +234,6 @@ export const MULTISIG_CONTROLLER_ABI =[
 		"type": "event"
 	},
 	{
-		"inputs": [],
-		"name": "pause",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
 		"anonymous": false,
 		"inputs": [
 			{
@@ -460,193 +251,6 @@ export const MULTISIG_CONTROLLER_ABI =[
 		],
 		"name": "RequiredPercentageChanged",
 		"type": "event"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			},
-			{
-				"internalType": "string",
-				"name": "ownerName",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "pct",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bool",
-				"name": "removable",
-				"type": "bool"
-			}
-		],
-		"name": "submitAddOwner",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "token",
-				"type": "address"
-			},
-			{
-				"internalType": "address[]",
-				"name": "recipients",
-				"type": "address[]"
-			},
-			{
-				"internalType": "uint256[]",
-				"name": "amounts",
-				"type": "uint256[]"
-			}
-		],
-		"name": "submitBatchTransferDifferent",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "txId",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "token",
-				"type": "address"
-			},
-			{
-				"internalType": "address[]",
-				"name": "recipients",
-				"type": "address[]"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amountPer",
-				"type": "uint256"
-			}
-		],
-		"name": "submitBatchTransferEqual",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "txId",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "v",
-				"type": "uint256"
-			}
-		],
-		"name": "submitChangeExpiry",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "v",
-				"type": "uint256"
-			}
-		],
-		"name": "submitChangeMinOwners",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "newName",
-				"type": "string"
-			}
-		],
-		"name": "submitChangeName",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "v",
-				"type": "uint256"
-			}
-		],
-		"name": "submitChangeRequiredPct",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "v",
-				"type": "uint256"
-			}
-		],
-		"name": "submitChangeTimelock",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
 	},
 	{
 		"anonymous": false,
@@ -781,15 +385,97 @@ export const MULTISIG_CONTROLLER_ABI =[
 		"type": "event"
 	},
 	{
-		"inputs": [],
-		"name": "unpause",
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "ownerName",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "percentage",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "removable",
+				"type": "bool"
+			}
+		],
+		"name": "addOwnerInternal",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
-		"stateMutability": "payable",
-		"type": "receive"
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "v",
+				"type": "uint256"
+			}
+		],
+		"name": "changeExpiryPeriodInternal",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "v",
+				"type": "uint256"
+			}
+		],
+		"name": "changeMinOwnersInternal",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "newName",
+				"type": "string"
+			}
+		],
+		"name": "changeNameInternal",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "v",
+				"type": "uint256"
+			}
+		],
+		"name": "changeRequiredPercentageInternal",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "v",
+				"type": "uint256"
+			}
+		],
+		"name": "changeTimelockPeriodInternal",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
 	},
 	{
 		"inputs": [],
@@ -805,6 +491,32 @@ export const MULTISIG_CONTROLLER_ABI =[
 		"type": "function"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "txId",
+				"type": "uint256"
+			}
+		],
+		"name": "confirmTransaction",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256[]",
+				"name": "txIds",
+				"type": "uint256[]"
+			}
+		],
+		"name": "confirmTransactionsBatch",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"inputs": [],
 		"name": "deployer",
 		"outputs": [
@@ -815,6 +527,19 @@ export const MULTISIG_CONTROLLER_ABI =[
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "txId",
+				"type": "uint256"
+			}
+		],
+		"name": "executeTransactionManual",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -832,6 +557,19 @@ export const MULTISIG_CONTROLLER_ABI =[
 	},
 	{
 		"inputs": [],
+		"name": "factory",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "getOwners",
 		"outputs": [
 			{
@@ -841,7 +579,7 @@ export const MULTISIG_CONTROLLER_ABI =[
 			},
 			{
 				"internalType": "string[]",
-				"name": "ownerName",
+				"name": "ownerNames",
 				"type": "string[]"
 			},
 			{
@@ -853,6 +591,19 @@ export const MULTISIG_CONTROLLER_ABI =[
 				"internalType": "bool[]",
 				"name": "removable",
 				"type": "bool[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getTransactionCount",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -958,6 +709,13 @@ export const MULTISIG_CONTROLLER_ABI =[
 	},
 	{
 		"inputs": [],
+		"name": "pause",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "paused",
 		"outputs": [
 			{
@@ -967,6 +725,19 @@ export const MULTISIG_CONTROLLER_ABI =[
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "addr",
+				"type": "address"
+			}
+		],
+		"name": "removeOwnerInternal",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -980,6 +751,232 @@ export const MULTISIG_CONTROLLER_ABI =[
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "ownerName",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "pct",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "removable",
+				"type": "bool"
+			}
+		],
+		"name": "submitAddOwner",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "token",
+				"type": "address"
+			},
+			{
+				"internalType": "address[]",
+				"name": "recipients",
+				"type": "address[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "amounts",
+				"type": "uint256[]"
+			}
+		],
+		"name": "submitBatchTransferDifferent",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "txId",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "token",
+				"type": "address"
+			},
+			{
+				"internalType": "address[]",
+				"name": "recipients",
+				"type": "address[]"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amountPer",
+				"type": "uint256"
+			}
+		],
+		"name": "submitBatchTransferEqual",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "v",
+				"type": "uint256"
+			}
+		],
+		"name": "submitChangeExpiry",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "v",
+				"type": "uint256"
+			}
+		],
+		"name": "submitChangeMinOwners",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "newName",
+				"type": "string"
+			}
+		],
+		"name": "submitChangeName",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "v",
+				"type": "uint256"
+			}
+		],
+		"name": "submitChangeRequiredPct",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "v",
+				"type": "uint256"
+			}
+		],
+		"name": "submitChangeTimelock",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "value",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "isToken",
+				"type": "bool"
+			},
+			{
+				"internalType": "address",
+				"name": "tokenAddr",
+				"type": "address"
+			},
+			{
+				"internalType": "bytes",
+				"name": "data",
+				"type": "bytes"
+			}
+		],
+		"name": "submitTransaction",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -1071,6 +1068,17 @@ export const MULTISIG_CONTROLLER_ABI =[
 		],
 		"stateMutability": "view",
 		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "unpause",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"stateMutability": "payable",
+		"type": "receive"
 	}
 ] as const;
 
@@ -1085,6 +1093,30 @@ export const COMPANY_WALLET_ABI = [
 		],
 		"stateMutability": "nonpayable",
 		"type": "constructor"
+	},
+	{
+		"inputs": [],
+		"name": "ReentrancyGuardReentrantCall",
+		"type": "error"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "successful",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "totalSent",
+				"type": "uint256"
+			}
+		],
+		"name": "BatchTransferExecuted",
+		"type": "event"
 	},
 	{
 		"anonymous": false,
@@ -1111,36 +1143,17 @@ export const COMPANY_WALLET_ABI = [
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "oldOwner",
-				"type": "address"
-			}
-		],
-		"name": "OwnershipRenounced",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "token",
+				"name": "previousOwner",
 				"type": "address"
 			},
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "from",
+				"name": "newOwner",
 				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
 			}
 		],
-		"name": "TokensReceived",
+		"name": "OwnershipTransferred",
 		"type": "event"
 	},
 	{
@@ -1195,6 +1208,52 @@ export const COMPANY_WALLET_ABI = [
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "token",
+				"type": "address"
+			},
+			{
+				"internalType": "address[]",
+				"name": "recipients",
+				"type": "address[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "amounts",
+				"type": "uint256[]"
+			}
+		],
+		"name": "executeBatchDifferent",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "token",
+				"type": "address"
+			},
+			{
+				"internalType": "address[]",
+				"name": "recipients",
+				"type": "address[]"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amountPer",
+				"type": "uint256"
+			}
+		],
+		"name": "executeBatchEqual",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -1285,23 +1344,11 @@ export const COMPANY_WALLET_ABI = [
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "token",
+				"name": "_controller",
 				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
 			}
 		],
-		"name": "receiveTokens",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "renounceOwnership",
+		"name": "setController",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -1310,11 +1357,11 @@ export const COMPANY_WALLET_ABI = [
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_controller",
+				"name": "newOwner",
 				"type": "address"
 			}
 		],
-		"name": "setController",
+		"name": "transferOwnership",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -1343,13 +1390,13 @@ export const MULTISIG_FACTORY_ABI = [
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "companyWallet",
+				"name": "wallet",
 				"type": "address"
 			},
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "deployer",
+				"name": "creator",
 				"type": "address"
 			},
 			{
@@ -1357,84 +1404,23 @@ export const MULTISIG_FACTORY_ABI = [
 				"internalType": "string",
 				"name": "name",
 				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "address[]",
-				"name": "owners",
-				"type": "address[]"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "requiredPercentage",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "timelockPeriod",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "expiryPeriod",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "minOwners",
-				"type": "uint256"
 			}
 		],
 		"name": "MultiSigCreated",
 		"type": "event"
 	},
 	{
-		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": true,
 				"internalType": "address",
-				"name": "controller",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "oldName",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "newName",
-				"type": "string"
-			}
-		],
-		"name": "MultiSigNameChanged",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "previousOwner",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "newOwner",
+				"name": "signer",
 				"type": "address"
 			}
 		],
-		"name": "OwnershipTransferred",
-		"type": "event"
+		"name": "addSignerMapping",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
 	},
 	{
 		"inputs": [
@@ -1464,6 +1450,25 @@ export const MULTISIG_FACTORY_ABI = [
 			}
 		],
 		"name": "allWallets",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "controllerToWallet",
 		"outputs": [
 			{
 				"internalType": "address",
@@ -1540,6 +1545,19 @@ export const MULTISIG_FACTORY_ABI = [
 	},
 	{
 		"inputs": [],
+		"name": "factoryOwner",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "getAllControllers",
 		"outputs": [
 			{
@@ -1552,8 +1570,14 @@ export const MULTISIG_FACTORY_ABI = [
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "getAllWallets",
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_signer",
+				"type": "address"
+			}
+		],
+		"name": "getControllersBySigner",
 		"outputs": [
 			{
 				"internalType": "address[]",
@@ -1570,12 +1594,7 @@ export const MULTISIG_FACTORY_ABI = [
 		"outputs": [
 			{
 				"internalType": "uint256",
-				"name": "controllers",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "wallets",
+				"name": "",
 				"type": "uint256"
 			}
 		],
@@ -1586,26 +1605,58 @@ export const MULTISIG_FACTORY_ABI = [
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "controller",
+				"name": "_controller",
 				"type": "address"
 			}
 		],
 		"name": "getMultiSigInfo",
 		"outputs": [
 			{
-				"internalType": "string",
-				"name": "name",
-				"type": "string"
-			},
-			{
-				"internalType": "address",
-				"name": "wallet",
-				"type": "address"
-			},
-			{
-				"internalType": "bool",
-				"name": "exists",
-				"type": "bool"
+				"components": [
+					{
+						"internalType": "string",
+						"name": "name",
+						"type": "string"
+					},
+					{
+						"internalType": "address",
+						"name": "controller",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "wallet",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "ownerCount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "requiredPercentage",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "minOwners",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "balance",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "isPaused",
+						"type": "bool"
+					}
+				],
+				"internalType": "struct MultiSigFactory.MultiSigData",
+				"name": "",
+				"type": "tuple"
 			}
 		],
 		"stateMutability": "view",
@@ -1615,16 +1666,16 @@ export const MULTISIG_FACTORY_ABI = [
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "controller",
+				"name": "",
 				"type": "address"
 			}
 		],
-		"name": "getMultiSigName",
+		"name": "isDeployedController",
 		"outputs": [
 			{
-				"internalType": "string",
+				"internalType": "bool",
 				"name": "",
-				"type": "string"
+				"type": "bool"
 			}
 		],
 		"stateMutability": "view",
@@ -1650,16 +1701,16 @@ export const MULTISIG_FACTORY_ABI = [
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "owner",
-		"outputs": [
+		"inputs": [
 			{
 				"internalType": "address",
-				"name": "",
+				"name": "signer",
 				"type": "address"
 			}
 		],
-		"stateMutability": "view",
+		"name": "removeSignerMapping",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -1679,31 +1730,48 @@ export const MULTISIG_FACTORY_ABI = [
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "token",
+				"name": "",
 				"type": "address"
 			},
 			{
 				"internalType": "uint256",
-				"name": "amount",
+				"name": "",
 				"type": "uint256"
 			}
 		],
-		"name": "rescueToken",
-		"outputs": [],
-		"stateMutability": "nonpayable",
+		"name": "signerToControllers",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "newOwner",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "userControllers",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
 				"type": "address"
 			}
 		],
-		"name": "transferOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{

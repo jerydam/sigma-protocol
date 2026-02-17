@@ -1,66 +1,53 @@
-import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
-import './globals.css'
-import { Header } from '@/components/layout/header'
-import { Sidebar } from '@/components/layout/sidebar'
-import { Web3Provider } from '@/components/providers/web3provider'
-import { NetworkSwitchModal } from '@/components/modals/network-switch-modal'
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/react';
+import './globals.css';
+import { ClientProviders, LayoutContent } from '@/components/layoutcontent';
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+// Fonts setup
+const geistSans = Geist({
+  subsets: ['latin'],
+  variable: '--font-geist-sans',
+});
 
+const geistMono = Geist_Mono({
+  subsets: ['latin'],
+  variable: '--font-geist-mono',
+});
+
+// Metadata stays here — this file is a Server Component (no 'use client')
 export const metadata: Metadata = {
-  title: 'Celo Multisig Factory - Secure Treasury Management',
-  description: 'Deploy percentage-based multisig wallets with timelocks and batch confirmations on Base sepolia',
-  generator: 'v0.app',
+  title: 'Sigma Protocol – Secure Treasury Management',
+  description:
+    'Percentage-based multisig treasuries with weighted governance, batch execution, and abstracted vaults. Built for DAOs and companies on Celo.',
+  generator: 'Sigma Protocol',
   icons: {
     icon: [
-      {
-        url: '/favicon.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/favicon.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/favicon.png',
-        type: 'image/svg+xml',
-      },
+      { url: '/favicon.png', media: '(prefers-color-scheme: light)' },
+      { url: '/favicon.png', media: '(prefers-color-scheme: dark)' },
+      { url: '/favicon.png', type: 'image/svg+xml' },
     ],
     apple: '/favicon.png',
   },
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`font-sans antialiased`}>
-        <Web3Provider>
-          <LayoutClient>{children}</LayoutClient>
-        </Web3Provider>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-background text-foreground`}
+      >
+        {/* All client providers and interactive stuff go in ClientProviders */}
+        <ClientProviders>
+          <LayoutContent>{children}</LayoutContent>
+        </ClientProviders>
+
         <Analytics />
       </body>
     </html>
-  )
-}
-
-function LayoutClient({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-background">
-      <NetworkSwitchModal />
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 overflow-auto">
-          {children}
-        </main>
-      </div>
-    </div>
-  )
+  );
 }

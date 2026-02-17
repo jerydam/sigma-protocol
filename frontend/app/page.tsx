@@ -2,229 +2,262 @@
 
 import { useEffect, useState } from 'react';
 import { 
-  BarChart3, Users, Zap, Lock, Loader2, AlertCircle, 
-  Wallet, ArrowRight, Layers, ShieldCheck, LayoutDashboard 
+  Zap, Loader2, Wallet, ArrowRight, ShieldCheck, Layers, 
+  Code2, Users, BookOpen, Fingerprint, Globe, CheckCircle2,
+  Github,
+  Twitter
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useFactoryMultisigs } from '@/hooks/use-factory';
-import { initializeProvider, MULTISIG_FACTORY_ADDRESS } from '@/lib/web3';
+import { MULTISIG_FACTORY_ADDRESS } from '@/lib/web3';
+import { cn } from '@/lib/utils';
 
-export default function Dashboard() {
+export default function LandingPage() {
   const { multisigs, loading } = useFactoryMultisigs(MULTISIG_FACTORY_ADDRESS);
-  const [isConnected, setIsConnected] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
-  const [network, setNetwork] = useState<{ chainId: bigint; name: string } | null>(null);
 
   useEffect(() => {
-    const init = async () => {
-      try {
-        const { provider } = await initializeProvider();
-        setIsConnected(true);
-        
-        const net = await provider.getNetwork();
-        setNetwork(net);
-      } catch (err) {
-        console.warn('Wallet not connected');
-        setIsConnected(false);
-      } finally {
-        setIsInitializing(false);
-        setMounted(true);
-      }
-    };
-
-    init();
+    setMounted(true);
   }, []);
 
-  if (!mounted || isInitializing) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center flex-col gap-4">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground font-medium tracking-wide animate-pulse">INITIALIZING SIGMA PROTOCOL</p>
-      </div>
-    );
-  }
+  if (!mounted) return null;
 
-  const isFactoryConfigured = MULTISIG_FACTORY_ADDRESS && MULTISIG_FACTORY_ADDRESS.length === 42;
-
-  // Stats Calculation
-  const totalMultisigs = multisigs.length;
-  const totalTransactions = multisigs.reduce((sum, m) => sum + (m.transactions ? m.transactions.length : 0), 0);
-  const totalOwners = multisigs.reduce((sum, m) => sum + (m.owners ? m.owners.length : 0), 0);
-  const tvlLocked = multisigs.reduce((sum, m) => sum + parseFloat(m.balance || '0'), 0);
+  const tvlLocked = multisigs.reduce((sum, m) => sum + Number(m.balance || 0), 0);
 
   return (
-    <div className="min-h-screen bg-background selection:bg-primary/20">
+    <div className="min-h-screen bg-white dark:bg-[#080808] text-black dark:text-white transition-colors duration-300">
       
-      {/* Navbar / Header */}
-      <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-4 md:px-8">
-          <div className="flex items-center gap-2 font-bold text-xl tracking-tighter">
-            <div className="bg-primary text-primary-foreground w-8 h-8 flex items-center justify-center rounded-lg">
-              Σ
-            </div>
-            <span>SIGMA</span>
-          </div>
-          
-          {/* Network Status */}
-          {network ? (
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-muted/50 text-xs font-medium text-muted-foreground border">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-              <span>{network.name} ({network.chainId.toString()})</span>
-            </div>
-          ) : (
-            <Button variant="ghost" size="sm" onClick={() => window.location.reload()}>
-              Connect
-            </Button>
-          )}
+      {/* 1. HERO SECTION */}
+      <section className="relative pt-32 pb-20 px-6 max-w-7xl mx-auto overflow-hidden">
+        {/* Subtle background glow for dark mode */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full pointer-events-none -z-10">
+           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-150 h-75 bg-primary/10 dark:bg-primary/20 blur-[120px] rounded-full" />
         </div>
-      </header>
 
-      <main className="p-4 md:p-8 max-w-7xl mx-auto">
-        
-        {/* Configuration Warning */}
-        {!isFactoryConfigured && (
-          <Card className="mb-8 border-destructive/50 bg-destructive/10">
-            <CardContent className="py-4">
-              <div className="flex items-start sm:items-center gap-3">
-                <AlertCircle className="h-5 w-5 text-destructive mt-0.5 sm:mt-0" />
-                <div>
-                  <p className="text-sm font-bold text-destructive">Configuration Error</p>
-                  <p className="text-xs sm:text-sm text-destructive/80">
-                    Factory address missing. Set <code className="bg-black/10 px-1 rounded">NEXT_PUBLIC_FACTORY_ADDRESS</code> in your env.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <div className="flex flex-col items-center text-center">
 
-        {/* Hero Section */}
-        <div className="relative py-12 md:py-24 lg:py-32 flex flex-col items-center text-center space-y-8">
-          
-          {/* Background Gradient Blob */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[300px] bg-primary/10 blur-[100px] rounded-full -z-10 pointer-events-none" />
+          <h1 className="text-6xl md:text-9xl font-black tracking-tighter leading-[0.85] mb-8 uppercase italic">
+            Weighted <br />
+            <span className="text-primary underline decoration-4 underline-offset-8">Treasuries</span>
+          </h1>
 
-          <Badge variant="secondary" className="px-4 py-1.5 text-sm rounded-full border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 transition-colors">
-            V1.0 Protocol Live
-          </Badge>
+          <p className="max-w-2xl text-lg md:text-xl text-muted-foreground mb-12 font-medium">
+            Sigma Protocol decouples governance logic from asset storage. Assign voting power based on equity and automate mass payouts on Celo.
+          </p>
 
-          <div className="space-y-4 max-w-3xl">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-foreground">
-              The Sum of <br className="hidden sm:block" />
-              <span className="text-primary bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/50">
-                Secure Finance
-              </span>
-            </h1>
-            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed px-4">
-              Sigma aggregates multisig security with batch transaction efficiency. Manage your company treasury with percentage-based governance.
-            </p>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto px-4 sm:px-0">
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             <Link href="/create" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full h-14 text-lg px-8 rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all">
-                Initialize Treasury <ArrowRight className="ml-2 h-5 w-5" />
+              <Button size="lg" className="w-full sm:w-auto h-14 px-10 rounded-none border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all font-black uppercase italic">
+                Initialize <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            {isConnected ? (
-              <Link href="/multisigs" className="w-full sm:w-auto">
-                <Button size="lg" variant="outline" className="w-full h-14 text-lg px-8 rounded-xl">
-                  <LayoutDashboard className="mr-2 h-5 w-5" /> Dashboard
-                </Button>
-              </Link>
-            ) : (
-              <Button size="lg" variant="outline" className="w-full h-14 text-lg px-8 rounded-xl" onClick={() => window.location.reload()}>
-                Connect Wallet
+            <Link href="/docs" className="w-full sm:w-auto">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto h-14 px-10 rounded-none border-2 border-black dark:border-white font-black uppercase italic hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
+                Documentation
               </Button>
-            )}
+            </Link>
           </div>
         </div>
+      </section>
 
-        {/* Stats Grid - Responsive: 1col mobile -> 2col tablet -> 4col desktop */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-24">
-          <StatsCard 
-            icon={<ShieldCheck className="h-5 w-5 text-primary" />}
-            label="Secured Treasuries"
-            value={loading ? '-' : totalMultisigs}
-            sub="Active Contracts"
-          />
-          <StatsCard 
-            icon={<Layers className="h-5 w-5 text-blue-500" />}
-            label="Operations"
-            value={loading ? '-' : totalTransactions}
-            sub="Processed Batches"
-          />
-          <StatsCard 
-            icon={<Users className="h-5 w-5 text-violet-500" />}
-            label="Signers"
-            value={loading ? '-' : totalOwners}
-            sub="Unique Owners"
-          />
-          <StatsCard 
-            icon={<Wallet className="h-5 w-5 text-emerald-500" />}
-            label="Value Locked"
-            value={loading ? '-' : `${tvlLocked.toFixed(2)} ETH`}
-            sub="Total Assets"
-          />
+      {/* 2. THE ARCHITECTURE VISUALIZATION */}
+      <section className="max-w-7xl mx-auto px-6 py-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6">
+            <h2 className="text-4xl md:text-5xl font-black uppercase italic leading-tight">
+              Dual-Layer <br />Fund Isolation
+            </h2>
+            <p className="text-muted-foreground text-lg leading-relaxed">
+              We separate the "Brain" from the "Vault." The <strong>Controller</strong> enforces your weighted equity rules, while the <strong>Company Wallet</strong> strictly holds assets.
+            </p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="text-primary h-5 w-5" />
+                <span className="font-bold uppercase text-sm">Controller-Wallet Decoupling</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="text-primary h-5 w-5" />
+                <span className="font-bold uppercase text-sm">Weighted Equity Logic</span>
+              </div>
+            </div>
+          </div>
+          
+          
         </div>
+      </section>
 
-        {/* Features Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-16">
-          <Feature 
-            icon={<BarChart3 className="h-6 w-6 text-primary" />}
-            title="Weighted Governance"
-            desc="Move beyond 1-person-1-vote. Assign equity-based voting power (e.g., CEO 40%, Investors 60%) for realistic corporate control."
-          />
-          <Feature 
-            icon={<Zap className="h-6 w-6 text-primary" />}
-            title="Batch Execution"
-            desc="The 'Sigma' advantage. Aggregate dozens of payroll or vendor payments into a single transaction hash to save up to 40% on gas."
-          />
-          <Feature 
-            icon={<Lock className="h-6 w-6 text-primary" />}
-            title="Abstracted Security"
-            desc="Logic and Liquidity are separated. The Controller manages the rules, while a distinct Vault Contract holds the actual assets."
-          />
+      {/* 3. BENTO GRID FEATURES */}
+      <section className="max-w-7xl mx-auto px-6 py-20 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <FeatureCard 
+          icon={<Fingerprint className="h-8 w-8" />}
+          title="Weighted Power"
+          desc="Voting power is derived from the sum of signer equity percentages."
+          className="md:col-span-2"
+        />
+        <FeatureCard 
+          icon={<Zap className="h-8 w-8" />}
+          title="Batch Payouts"
+          desc="Bundle up to 100 transfers via CSV to save 60% on gas."
+          className="md:col-span-2"
+        />
+        <FeatureCard 
+          icon={<Layers className="h-8 w-8" />}
+          title="Modular Vaults"
+          desc="Isolated treasuries for maximum security and ease of management."
+          className="md:col-span-1"
+        />
+        <FeatureCard 
+          icon={<ShieldCheck className="h-8 w-8" />}
+          title="Timelocks"
+          desc="Execution delays for high-value governance moves."
+          className="md:col-span-2"
+        />
+        <FeatureCard 
+          icon={<Globe className="h-8 w-8" />}
+          title="Celo Native"
+          desc="Optimized for Alfajores with sub-cent transaction costs."
+          className="md:col-span-1"
+        />
+      </section>
+
+      {/* 4. REVENUE / STATS BAR */}
+     <section className=" py-16 bg-transparent">
+  <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
+     <StatItem 
+       label="Active Vaults" 
+       value={loading ? '...' : multisigs.length} 
+       className="text-black dark:text-white"
+     />
+     <StatItem 
+       label="Value Secured" 
+       value={loading ? '...' : `${tvlLocked.toFixed(2)} CELO`} 
+       className="text-black dark:text-white"
+     />
+     <StatItem 
+       label="Signers" 
+       value="1.2k+" 
+       className="text-black dark:text-white"
+     />
+     <StatItem 
+       label="Success Rate" 
+       value="99.9%" 
+       className="text-black dark:text-white"
+     />
+  </div>
+</section>
+
+      {/* 5. PROTOCOL FOOTER */}
+     <footer className="mt-20 bg-transparent transition-colors duration-300">
+  <div className="max-w-7xl mx-auto px-6 py-20">
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
+      
+      {/* Brand Column */}
+      <div className="md:col-span-5 space-y-6">
+        <div className="flex items-center gap-2">
+          <div className="h-12 w-12 bg-black dark:bg-white flex items-center justify-center text-white dark:text-black font-black text-2xl italic">
+            Σ
+          </div>
+          <span className="font-black uppercase italic text-3xl tracking-tighter">SIGMA</span>
         </div>
-      </main>
+        <p className="max-w-xs text-sm font-medium leading-relaxed text-muted-foreground uppercase">
+          Weighted equity governance and automated treasury operations for the next generation of Celo-native organizations.
+        </p>
+        <div className="flex gap-4">
+          <Link href="https://github.com" className="p-2 border-2 border-black dark:border-white hover:bg-primary hover:text-white transition-all">
+            <Github className="h-5 w-5" />
+          </Link>
+          <Link href="https://twitter.com" className="p-2 border-2 border-black dark:border-white hover:bg-primary hover:text-white transition-all">
+            <Twitter className="h-5 w-5" />
+          </Link>
+        </div>
+      </div>
+
+      {/* Navigation Columns */}
+      <div className="md:col-span-7 grid grid-cols-2 md:grid-cols-3 gap-8">
+        <FooterLinkGroup 
+          title="Protocol" 
+          links={[
+            { label: 'Create Vault', href: '/create' },
+            { label: 'Explore Wallets', href: '/wallets' },
+            { label: 'Governance', href: '/docs#governance' },
+          ]} 
+        />
+        <FooterLinkGroup 
+          title="Support" 
+          links={[
+            { label: 'Documentation', href: '/docs' },
+            { label: 'API Reference', href: '/docs#api' },
+            { label: 'Troubleshooting', href: '/docs#troubleshooting' },
+          ]} 
+        />
+        <FooterLinkGroup 
+          title="Ecosystem" 
+          links={[
+            { label: 'Celo Foundation', href: 'https://celo.org' },
+            { label: 'Alfajores Faucet', href: 'https://faucet.celo.org' },
+            { label: 'CeloScan', href: 'https://celoscan.io' },
+          ]} 
+        />
+      </div>
+      
+    </div>
+<div className="mt-20 pt-8  flex flex-col md:flex-row justify-center items-center gap-6">
+      
+      <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+        © 2026 Sigma Protocol • The Sum of Secure Finance
+      </p>
+    </div>
+    
+    
+  </div>
+</footer>
+    </div>
+  );
+}
+function FooterLinkGroup({ title, links }: { title: string, links: { label: string, href: string }[] }) {
+  return (
+    <div className="space-y-4">
+      <h4 className="font-black uppercase italic text-sm tracking-widest underline decoration-2 underline-offset-4 decoration-primary">
+        {title}
+      </h4>
+      <ul className="space-y-2">
+        {links.map((link) => (
+          <li key={link.label}>
+            <Link 
+              href={link.href} 
+              className="text-xs font-bold uppercase italic text-muted-foreground hover:text-primary transition-colors block"
+            >
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+function FeatureCard({ icon, title, desc, className }: { icon: React.ReactNode, title: string, desc: string, className?: string }) {
+  return (
+    <div className={cn(
+      "p-8 border-2 border-black dark:border-white hover:bg-primary/5 transition-all group",
+      className
+    )}>
+      <div className="mb-6 text-primary group-hover:scale-110 transition-transform origin-left">{icon}</div>
+      <h3 className="text-xl font-black uppercase italic mb-3">{title}</h3>
+      <p className="text-sm text-muted-foreground font-medium leading-relaxed">{desc}</p>
     </div>
   );
 }
 
-// --- Sub Components for Cleaner Code ---
-
-function StatsCard({ icon, label, value, sub }: { icon: React.ReactNode, label: string, value: string | number, sub: string }) {
+function StatItem({ label, value, className }: { label: string, value: string | number, className?: string }) {
   return (
-    <Card className="border-border/60 bg-card/50 backdrop-blur-sm hover:bg-card hover:border-primary/50 transition-all duration-300 group">
-      <CardHeader className="pb-2 space-y-0">
-        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-          {label}
-          <div className="p-2 bg-background rounded-lg border group-hover:border-primary/30 transition-colors">
-            {icon}
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl sm:text-3xl font-bold tracking-tight">{value}</div>
-        <p className="text-xs text-muted-foreground mt-1">{sub}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function Feature({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) {
-  return (
-    <div className="flex flex-col items-start p-6 rounded-2xl bg-muted/30 border border-transparent hover:border-border transition-all">
-      <div className="bg-primary/10 p-3 rounded-xl mb-4 ring-1 ring-primary/20">
-        {icon}
-      </div>
-      <h3 className="text-xl font-semibold mb-2">{title}</h3>
-      <p className="text-muted-foreground leading-relaxed text-sm sm:text-base">
-        {desc}
+    <div className={cn("text-center md:text-left", className)}>
+      <p className="text-[10px] uppercase font-black tracking-widest mb-1 text-muted-foreground opacity-80">
+        {label}
+      </p>
+      <p className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter transition-colors duration-300">
+        {value}
       </p>
     </div>
   );

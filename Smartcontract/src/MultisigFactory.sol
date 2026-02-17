@@ -1,66 +1,39 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import "./multisig.sol";
-import "./wallet.sol";
 
 contract MultiSigFactory {
-    // ============ EVENTS ============
-    event MultiSigCreated(
-        address indexed controller,
-        address indexed companyWallet,
-        address indexed deployer,
-        string name,
-        address[] owners,
-        uint256 requiredPercentage,
-        uint256 timelockPeriod,
-        uint256 expiryPeriod,
-        uint256 minOwners
-    );
-
-    event MultiSigNameChanged(address indexed controller, string oldName, string newName);
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
     // ============ STATE ============
-    address public owner;
+    address public factoryOwner;
     address[] public allControllers;
     address[] public allWallets;
     
+    mapping(address => bool) public isDeployedController;
+    mapping(address => address[]) public userControllers;
     mapping(address => string) public multiSigNames;
+    mapping(address => address[]) public signerToControllers;
+    mapping(address => address) public controllerToWallet;
+
+    // ============ EVENTS ============
+    event MultiSigCreated(address indexed controller, address indexed wallet, address indexed creator, string name);
 
     // ============ MODIFIERS ============
     modifier onlyOwner() {
-        require(msg.sender == owner, "Not owner");
+        require(msg.sender == factoryOwner, "Not factory owner");
         _;
     }
 
-    // ============ CONSTRUCTOR ============
-    constructor() {
-        owner = msg.sender;
+    modifier onlyController() {
+        require(isDeployedController[msg.sender], "Not authorized controller");
+        _;
     }
 
-    // ============ OWNERSHIP ============
-    function transferOwnership(address newOwner) external onlyOwner {
-        require(newOwner != address(0), "Zero address");
-        emit OwnershipTransferred(owner, newOwner);
-        owner = newOwner;
+    constructor() {
+        factoryOwner = msg.sender;
     }
 
     // ============ FACTORY FUNCTION ============
-    /**
-     * @dev Creates a new MultiSig instance with CompanyWallet
-     * @param _name Name of the MultiSig
-     * @param _initialOwners List of initial owner addresses
-     * @param _initialNames List of owner names
-     * @param _initialPercentages List of owner percentages (1-100)
-     * @param _initialRemovable Whether each owner is removable
-     * @param _requiredPercentage Required % to confirm transactions
-     * @param _timelockPeriod Delay after confirmation before execution
-     * @param _expiryPeriod Time after which transaction expires
-     * @param _minOwners Minimum number of owners allowed
-     * @return controller Address of deployed MultiSigWalletController
-     * @return companyWallet Address of deployed CompanyWallet
-     */
     function createMultiSig(
         string calldata _name,
         address[] calldata _initialOwners,
@@ -71,103 +44,125 @@ contract MultiSigFactory {
         uint256 _timelockPeriod,
         uint256 _expiryPeriod,
         uint256 _minOwners
-    ) external onlyOwner returns (address controller, address companyWallet) {
-        // Input validation
-        require(bytes(_name).length > 0, "Empty name");
-        require(_initialOwners.length >= 2, "Min 2 owners");
-        require(
-            _initialOwners.length == _initialNames.length &&
-            _initialOwners.length == _initialPercentages.length &&
-            _initialOwners.length == _initialRemovable.length,
-            "Array length mismatch"
-        );
-        require(_requiredPercentage > 0 && _requiredPercentage <= 100, "Invalid req%");
-        require(_minOwners >= 2, "minOwners >= 2");
-        require(_expiryPeriod > 0, "expiry > 0");
-
-        // Deploy CompanyWallet
+    ) external returns (address controller, address companyWallet) {
         CompanyWallet wallet = new CompanyWallet(address(this));
-        companyWallet = address(wallet);
-        allWallets.push(companyWallet);
-
-        // Deploy MultiSigWalletController
+        
         MultiSigWalletController ctrl = new MultiSigWalletController(
-            companyWallet,
-            _name,
-            _initialOwners,
-            _initialNames,
-            _initialPercentages,
-            _initialRemovable,
-            _requiredPercentage,
-            _timelockPeriod,
-            _expiryPeriod,
-            _minOwners
+            msg.sender, address(wallet), _name, _initialOwners, _initialNames, 
+            _initialPercentages, _initialRemovable, address(this), 
+            _requiredPercentage, _timelockPeriod, _expiryPeriod, _minOwners
         );
+
+        // Register Controller
+        isDeployedController[address(ctrl)] = true;
+        
+        // Register Signers
+        for (uint256 i = 0; i < _initialOwners.length; i++) {
+            signerToControllers[_initialOwners[i]].push(address(ctrl));
+        }
+
+        wallet.setController(address(ctrl));
+        wallet.transferOwnership(msg.sender);
+        
         controller = address(ctrl);
+        companyWallet = address(wallet);
+        
         allControllers.push(controller);
-
-        // Transfer ownership of CompanyWallet to Controller
-        wallet.setController(controller);
-
-        // Store the MultiSig name
+        allWallets.push(companyWallet);
+        userControllers[msg.sender].push(controller);
         multiSigNames[controller] = _name;
+        controllerToWallet[controller] = companyWallet;
 
-        // Emit event
-        emit MultiSigCreated(
-            controller,
-            companyWallet,
-            msg.sender,
-            _name,
-            _initialOwners,
-            _requiredPercentage,
-            _timelockPeriod,
-            _expiryPeriod,
-            _minOwners
-        );
-
-        return (controller, companyWallet);
+        emit MultiSigCreated(controller, companyWallet, msg.sender, _name);
     }
 
-    // ============ VIEW FUNCTIONS ============
-    function getAllControllers() external view returns (address[] memory) {
-        return allControllers;
+    // ============ MAPPING HELPERS ============
+    function addSignerMapping(address signer) external onlyController {
+        signerToControllers[signer].push(msg.sender);
     }
 
-    function getAllWallets() external view returns (address[] memory) {
-        return allWallets;
-    }
-
-    function getDeploymentCount() external view returns (uint256 controllers, uint256 wallets) {
-        return (allControllers.length, allWallets.length);
-    }
-
-    function getMultiSigName(address controller) external view returns (string memory) {
-        return multiSigNames[controller];
-    }
-
-    function getMultiSigInfo(address controller) external view returns (
-        string memory name,
-        address wallet,
-        bool exists
-    ) {
-        name = multiSigNames[controller];
-        exists = false;
-        for (uint256 i = 0; i < allControllers.length; i++) {
-            if (allControllers[i] == controller) {
-                exists = true;
-                wallet = allWallets[i];
+    function removeSignerMapping(address signer) external onlyController {
+        address[] storage controllers = signerToControllers[signer];
+        for (uint i = 0; i < controllers.length; i++) {
+            if (controllers[i] == msg.sender) {
+                controllers[i] = controllers[controllers.length - 1];
+                controllers.pop();
                 break;
             }
         }
     }
 
-    // ============ EMERGENCY WITHDRAW (ETH & ERC20) ============
-    function rescueETH(uint256 amount) external onlyOwner {
-        payable(owner).transfer(amount);
+    // ============ VIEW FUNCTIONS ============
+
+    /**
+     * @dev Struct to return detailed multisig info in a single call
+     */
+    struct MultiSigData {
+        string name;
+        address controller;
+        address wallet;
+        uint256 ownerCount;
+        uint256 requiredPercentage;
+        uint256 minOwners;
+        uint256 balance;
+        bool isPaused;
     }
 
-    function rescueToken(address token, uint256 amount) external onlyOwner {
-        IERC20(token).transfer(owner, amount);
+    /**
+     * @dev Returns consolidated data for a specific multisig controller
+     * Requires the MultiSigWalletController to have public getters for:
+     * - requiredPercentage()
+     * - minOwners()
+     * - paused()
+     * - getOwners() or owners array
+     */
+    function getMultiSigInfo(address _controller) external view returns (MultiSigData memory) {
+        require(isDeployedController[_controller], "Controller not found");
+
+        // 1. Get basic info stored in Factory
+        string memory _name = multiSigNames[_controller];
+        address _wallet = controllerToWallet[_controller];
+
+        // 2. Instantiate the Controller
+        MultiSigWalletController ctrl = MultiSigWalletController(payable(_controller));
+
+        // 3. FIX: Destructure the tuple to get the owners array first
+        (address[] memory _owners, , , ) = ctrl.getOwners();
+        
+        uint256 _ownerCount = _owners.length;
+        uint256 _reqPct = ctrl.requiredPercentage();
+        uint256 _minOwn = ctrl.minOwners();
+        bool _paused = ctrl.paused();
+
+        // 4. Return formatted struct
+        return MultiSigData({
+            name: _name,
+            controller: _controller,
+            wallet: _wallet,
+            ownerCount: _ownerCount,
+            requiredPercentage: _reqPct,
+            minOwners: _minOwn,
+            balance: _wallet.balance, // This gets the factory's balance, assuming you want the WALLET'S balance:
+            // balance: _wallet.balance, // This is correct if _wallet is an address
+            isPaused: _paused
+        });
+    }
+    function getDeploymentCount() external view returns (uint256) {
+        return allControllers.length;
+    }
+
+    function getAllControllers() external view returns (address[] memory) {
+        return allControllers;
+    }
+
+    function getControllersBySigner(address _signer) external view returns (address[] memory) {
+        return signerToControllers[_signer];
+    }
+
+    
+    // ============ EMERGENCY RESCUE ============
+    function rescueETH(uint256 amount) external onlyOwner {
+        payable(factoryOwner).transfer(amount);
     }
 
     receive() external payable {}

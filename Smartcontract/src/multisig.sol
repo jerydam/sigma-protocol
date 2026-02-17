@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import "./IWallet.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./Ifactory.sol";
+import "../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MultiSigWalletController is ReentrancyGuard {
-    // ============ STRUCTS ============
     struct Owner {
         string ownerName;
-        uint256 percentage;   // 1 - 100
+        uint256 percentage;
         bool exists;
         bool removable;
     }
@@ -28,15 +28,12 @@ contract MultiSigWalletController is ReentrancyGuard {
         uint256 timelockEnd;
     }
 
-    // ============ BATCH STATE ============
+    address public immutable factory;
     address constant ETH_ADDRESS = address(0);
-
-    // ============ CONFIG STATE ============
     string public name;
     mapping(address => Owner) public owners;
     address[] public ownerList;
     uint256 public totalPercentage;
-
     uint256 public requiredPercentage;
     uint256 public timelockPeriod;
     uint256 public expiryPeriod;
@@ -66,10 +63,8 @@ contract MultiSigWalletController is ReentrancyGuard {
     event ContractUnpaused();
     event TransferFailed(address indexed recipient, uint256 amount);
 
-    // ============ MODIFIERS ============
     modifier onlyOwner() {
         require(owners[msg.sender].exists, "Not owner");
-        require(msg.sender != deployer, "Deployer blocked");
         _;
     }
     modifier onlyDeployer() { require(msg.sender == deployer, "Only deployer"); _; }
@@ -81,112 +76,63 @@ contract MultiSigWalletController is ReentrancyGuard {
         _;
     }
 
-    // ============ CONSTRUCTOR ============
     constructor(
+        address _creator,
         address _companyWallet,
         string memory _name,
         address[] memory _initialOwners,
         string[] memory _initialNames,
         uint256[] memory _initialPercentages,
         bool[] memory _initialRemovable,
+        address _factory,
         uint256 _requiredPercentage,
         uint256 _timelockPeriod,
         uint256 _expiryPeriod,
         uint256 _minOwners
     ) {
-        require(_companyWallet != address(0), "Invalid wallet");
-        require(bytes(_name).length > 0, "Empty name");
-        require(_initialOwners.length >= 2, "Min 2 owners");
-        require(
-            _initialOwners.length == _initialNames.length &&
-            _initialOwners.length == _initialPercentages.length &&
-            _initialOwners.length == _initialRemovable.length,
-            "Array mismatch"
-        );
-
-        deployer = msg.sender;
+        deployer = _creator; 
         companyWallet = ICompanyWallet(_companyWallet);
+        factory = _factory;
         name = _name;
-
-        // Config
-        require(_requiredPercentage > 0 && _requiredPercentage <= 100, "Invalid req%");
-        require(_minOwners >= 2, "minOwners >= 2");
-        require(_expiryPeriod > 0, "expiry > 0");
-
         requiredPercentage = _requiredPercentage;
-        timelockPeriod     = _timelockPeriod;
-        expiryPeriod       = _expiryPeriod;
-        minOwners          = _minOwners;
+        timelockPeriod = _timelockPeriod;
+        expiryPeriod = _expiryPeriod;
+        minOwners = _minOwners;
 
-        // Add owners
         for (uint256 i = 0; i < _initialOwners.length; i++) {
             address ownerAddr = _initialOwners[i];
-            require(ownerAddr != address(0) && ownerAddr != deployer, "Invalid owner");
-            require(!owners[ownerAddr].exists, "Duplicate");
-            require(bytes(_initialNames[i]).length > 0, "Empty name");
-            uint256 pct = _initialPercentages[i];
-            require(pct > 0 && pct <= 100, "Invalid %");
-
-            totalPercentage += pct;
-            owners[ownerAddr] = Owner(_initialNames[i], pct, true, _initialRemovable[i]);
+            require(ownerAddr != address(0) && ownerAddr != _creator, "Creator cannot be owner");
+            
+            owners[ownerAddr] = Owner(_initialNames[i], _initialPercentages[i], true, _initialRemovable[i]);
             ownerList.push(ownerAddr);
-            emit OwnerAdded(ownerAddr, _initialNames[i], pct);
+            totalPercentage += _initialPercentages[i];
+            
+            // NOTE: Factory mapping is handled by the factory itself during createMultiSig
+            
+            emit OwnerAdded(ownerAddr, _initialNames[i], _initialPercentages[i]);
         }
         require(totalPercentage <= 100, "Total > 100");
     }
 
-    // ============ BATCH TRANSFER: EQUAL AMOUNTS ============
-    function submitBatchTransferEqual(
-        address token,
-        address[] calldata recipients,
-        uint256 amountPer
-    ) external payable onlyOwner whenNotPaused returns (uint256 txId) {
-        require(recipients.length > 0, "No recipients");
-        require(amountPer > 0, "Amount > 0");
-
-        bytes memory data = abi.encodeWithSelector(
-            this.executeBatchEqual.selector,
-            token, recipients, amountPer
-        );
-        uint256 value = token == ETH_ADDRESS ? msg.value : 0;
-        return _submit(address(this), value, false, address(0), data);
+    // ============ PUBLIC SUBMIT FUNCTION (ADDED) ============
+    /**
+     * @dev Allows owners to submit any transaction (ETH transfer, Token transfer, or Contract interaction).
+     * This fixes the "contract.submitTransaction is not a function" error.
+     */
+    function submitTransaction(
+        address to, 
+        uint256 value, 
+        bool isToken, 
+        address tokenAddr, 
+        bytes memory data
+    ) external onlyOwner whenNotPaused returns (uint256) {
+        return _submit(to, value, isToken, tokenAddr, data);
     }
 
-    function executeBatchEqual(
-        address token,
-        address[] calldata recipients,
-        uint256 amountPer
-    ) external payable {
-        require(msg.sender == address(this), "Only self");
-        uint256 total = amountPer * recipients.length;
-        uint256 successCount = 0;
-
-        if (token == ETH_ADDRESS) {
-            require(msg.value >= total, "Low ETH");
-            for (uint256 i = 0; i < recipients.length; i++) {
-                if (recipients[i] != address(0)) {
-                    (bool sent, ) = payable(recipients[i]).call{value: amountPer}("");
-                    if (sent) successCount++;
-                    else emit TransferFailed(recipients[i], amountPer);
-                }
-            }
-            uint256 excess = msg.value - total;
-            if (excess > 0) {
-                (bool refund, ) = payable(tx.origin).call{value: excess}("");
-                require(refund, "Refund failed");
-            }
-        } else {
-            IERC20 erc20 = IERC20(token);
-            require(erc20.balanceOf(address(this)) >= total, "Low token");
-            for (uint256 i = 0; i < recipients.length; i++) {
-                if (recipients[i] != address(0)) {
-                    bool sent = erc20.transfer(recipients[i], amountPer);
-                    if (sent) successCount++;
-                    else emit TransferFailed(recipients[i], amountPer);
-                }
-            }
-        }
-        emit BatchTransferExecuted(0, successCount, amountPer * successCount);
+    // ============ BATCH TRANSFER: EQUAL AMOUNTS ============
+    function submitBatchTransferEqual(address token, address[] calldata recipients, uint256 amountPer) external onlyOwner returns (uint256) {
+        bytes memory data = abi.encodeWithSelector(ICompanyWallet.executeBatchEqual.selector, token, recipients, amountPer);
+        return _submit(address(companyWallet), 0, false, address(0), data);
     }
 
     // ============ BATCH TRANSFER: DIFFERENT AMOUNTS ============
@@ -198,65 +144,15 @@ contract MultiSigWalletController is ReentrancyGuard {
         require(recipients.length == amounts.length, "Mismatch");
         require(recipients.length > 0, "Empty");
 
-        uint256 total = 0;
-        for (uint256 i = 0; i < amounts.length; i++) {
-            require(amounts[i] > 0, "Amount > 0");
-            total += amounts[i];
-        }
-
+        // Encode the call for the WALLET'S batch function
         bytes memory data = abi.encodeWithSelector(
-            this.executeBatchDifferent.selector,
-            token, recipients, amounts
+            ICompanyWallet.executeBatchDifferent.selector,
+            token, 
+            recipients, 
+            amounts
         );
-        uint256 value = token == ETH_ADDRESS ? msg.value : 0;
-        return _submit(address(this), value, false, address(0), data);
-    }
 
-    function executeBatchDifferent(
-        address token,
-        address[] calldata recipients,
-        uint256[] calldata amounts
-    ) external payable {
-        require(msg.sender == address(this), "Only self");
-        uint256 total = 0;
-        for (uint256 i = 0; i < amounts.length; i++) total += amounts[i];
-        uint256 successCount = 0;
-        uint256 totalSent = 0;
-
-        if (token == ETH_ADDRESS) {
-            require(msg.value >= total, "Low ETH");
-            for (uint256 i = 0; i < recipients.length; i++) {
-                if (recipients[i] != address(0) && amounts[i] > 0) {
-                    (bool sent, ) = payable(recipients[i]).call{value: amounts[i]}("");
-                    if (sent) {
-                        successCount++;
-                        totalSent += amounts[i];
-                    } else {
-                        emit TransferFailed(recipients[i], amounts[i]);
-                    }
-                }
-            }
-            uint256 excess = msg.value - total;
-            if (excess > 0) {
-                (bool refund, ) = payable(tx.origin).call{value: excess}("");
-                require(refund, "Refund failed");
-            }
-        } else {
-            IERC20 erc20 = IERC20(token);
-            require(erc20.balanceOf(address(this)) >= total, "Low token");
-            for (uint256 i = 0; i < recipients.length; i++) {
-                if (recipients[i] != address(0) && amounts[i] > 0) {
-                    bool sent = erc20.transfer(recipients[i], amounts[i]);
-                    if (sent) {
-                        successCount++;
-                        totalSent += amounts[i];
-                    } else {
-                        emit TransferFailed(recipients[i], amounts[i]);
-                    }
-                }
-            }
-        }
-        emit BatchTransferExecuted(0, successCount, totalSent);
+        return _submit(address(companyWallet), 0, false, address(0), data);
     }
 
     // ============ CORE MULTISIG LOGIC ============
@@ -275,11 +171,14 @@ contract MultiSigWalletController is ReentrancyGuard {
         txn.tokenAddress = tokenAddr;
         txn.executed = false;
         txn.timestamp = block.timestamp;
+        
+        // Auto-confirm for the initiator
         txn.confirmations[msg.sender] = true;
         txn.confirmationCount = owners[msg.sender].percentage;
 
         emit TransactionSubmitted(txId, msg.sender, to, value, isToken);
 
+        // Check if it passes immediately
         if (isConfirmed(txId)) {
             txn.timelockEnd = block.timestamp + timelockPeriod;
             if (timelockPeriod == 0) _execute(txId);
@@ -291,9 +190,12 @@ contract MultiSigWalletController is ReentrancyGuard {
         TransactionRecord storage txn = transactions[txId];
         require(!txn.executed, "Executed");
         require(!txn.confirmations[msg.sender], "Confirmed");
+        
         txn.confirmations[msg.sender] = true;
         txn.confirmationCount += owners[msg.sender].percentage;
+        
         emit TransactionConfirmed(txId, msg.sender, owners[msg.sender].percentage);
+        
         if (isConfirmed(txId) && txn.timelockEnd == 0) {
             txn.timelockEnd = block.timestamp + timelockPeriod;
             if (timelockPeriod == 0) _execute(txId);
@@ -311,11 +213,25 @@ contract MultiSigWalletController is ReentrancyGuard {
 
     function _execute(uint256 txId) internal {
         TransactionRecord storage txn = transactions[txId];
+        require(!txn.executed, "Already executed");
         txn.executed = true;
 
-        (bool ok, ) = txn.to.call{value: txn.value}(txn.data);
-        require(ok, "Call failed");
-
+        bool success;
+        if (txn.to == address(this)) {
+            // Internal governance logic
+            (success, ) = txn.to.call{value: txn.value}(txn.data);
+        } else {
+            // External execution via CompanyWallet
+            success = companyWallet.executeTransaction(
+                txn.to,
+                txn.value,
+                txn.isTokenTransfer,
+                txn.tokenAddress,
+                txn.data
+            );
+        }
+        
+        require(success, "Execution failed");
         emit TransactionExecuted(txId);
     }
 
@@ -336,6 +252,37 @@ contract MultiSigWalletController is ReentrancyGuard {
             abi.encodeWithSelector(this.changeNameInternal.selector, newName));
     }
 
+    // Add this inside MultiSigWalletController contract
+
+    function confirmTransactionsBatch(uint256[] calldata txIds) external onlyOwner whenNotPaused {
+        for (uint256 i = 0; i < txIds.length; i++) {
+            uint256 txId = txIds[i];
+            
+            // 1. Validation (Matches modifiers)
+            require(txId < transactions.length, "Invalid tx");
+            // Check expiry manually since we can't use the modifier in a loop easily
+            require(block.timestamp <= transactions[txId].timestamp + expiryPeriod, "Expired");
+            
+            TransactionRecord storage txn = transactions[txId];
+            require(!txn.executed, "Executed");
+            
+            // Skip if already confirmed (prevents revert causing entire batch to fail)
+            if (txn.confirmations[msg.sender]) continue;
+
+            // 2. State Changes
+            txn.confirmations[msg.sender] = true;
+            txn.confirmationCount += owners[msg.sender].percentage;
+
+            emit TransactionConfirmed(txId, msg.sender, owners[msg.sender].percentage);
+
+            // 3. Execution Check
+            if (isConfirmed(txId) && txn.timelockEnd == 0) {
+                txn.timelockEnd = block.timestamp + timelockPeriod;
+                if (timelockPeriod == 0) _execute(txId);
+            }
+        }
+    }
+    
     // ============ ADMIN FUNCTIONS (via proposal) ============
     function changeRequiredPercentageInternal(uint256 v) external whenNotPaused validPercentage(v) {
         require(msg.sender == address(this), "Only self");
@@ -388,10 +335,39 @@ contract MultiSigWalletController is ReentrancyGuard {
     function _addOwnerInternal(address addr, string memory ownerName, uint256 pct, bool removable) internal {
         require(!owners[addr].exists, "Exists");
         require(totalPercentage + pct <= 100, "Sum > 100");
+        
         owners[addr] = Owner(ownerName, pct, true, removable);
         ownerList.push(addr);
         totalPercentage += pct;
+
+        // Update Factory Index
+        IMultiSigFactory(factory).addSignerMapping(addr);
+        
         emit OwnerAdded(addr, ownerName, pct);
+    }
+
+    function removeOwnerInternal(address addr) external whenNotPaused {
+        require(msg.sender == address(this), "Only self");
+        require(owners[addr].exists, "Not owner");
+        require(owners[addr].removable, "Not removable");
+        require(ownerList.length - 1 >= minOwners, "Too few owners");
+
+        uint256 pct = owners[addr].percentage;
+        totalPercentage -= pct;
+        delete owners[addr];
+
+        for (uint256 i = 0; i < ownerList.length; i++) {
+            if (ownerList[i] == addr) {
+                ownerList[i] = ownerList[ownerList.length - 1];
+                ownerList.pop();
+                break;
+            }
+        }
+
+        // Update Factory Index
+        IMultiSigFactory(factory).removeSignerMapping(addr);
+
+        emit OwnerRemoved(addr, pct);
     }
 
     function addOwnerInternal(address newOwner, string calldata ownerName, uint256 percentage, bool removable)
@@ -410,23 +386,28 @@ contract MultiSigWalletController is ReentrancyGuard {
     function getOwners()
         external view returns (
             address[] memory addrs,
-            string[] memory ownerName,
+            string[] memory ownerNames,
             uint256[] memory percentages,
             bool[] memory removable
         ) {
         uint256 len = ownerList.length;
         addrs = new address[](len);
-        ownerName = new string[](len);
+        ownerNames = new string[](len);
         percentages = new uint256[](len);
         removable = new bool[](len);
         for (uint256 i = 0; i < len; i++) {
             address a = ownerList[i];
             Owner memory o = owners[a];
             addrs[i] = a;
-            ownerName[i] = o.ownerName;
+            ownerNames[i] = o.ownerName;
             percentages[i] = o.percentage;
             removable[i] = o.removable;
         }
+    }
+    
+    // Helper to get transaction count
+    function getTransactionCount() external view returns (uint256) {
+        return transactions.length;
     }
 
     // ============ EMERGENCY ============

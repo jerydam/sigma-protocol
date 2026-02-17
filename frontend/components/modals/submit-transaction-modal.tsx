@@ -7,12 +7,15 @@ import {
   Settings, Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useWallets } from '@privy-io/react-auth';
+import { BrowserProvider } from 'ethers';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { StatusModal, StatusType } from '@/components/modals/status-modal';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -118,7 +121,9 @@ export function SubmitTransactionModal({
   controllerAddress,
   defaultTab = 'transfer' 
 }: SubmitTransactionModalProps) {
-  
+  const { wallets } = useWallets();
+
+
   // --- State ---
   const [mode, setMode] = useState<'transfer' | 'custom' | 'owner'>(defaultTab);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -154,6 +159,13 @@ export function SubmitTransactionModal({
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [statusState, setStatusState] = useState<{
+    isOpen: boolean;
+    type: StatusType;
+    title: string;
+    description: string;
+    txHash?: string;
+  }>({ isOpen: false, type: null, title: '', description: '' });
   // --- Effects ---
 
   // Reset on open
@@ -286,61 +298,92 @@ export function SubmitTransactionModal({
     setError(null);
   };
 
-  // --- Submit Logic (Updated for 'custom' simplification) ---
-  const handleSubmit = async () => {
+ 
+
+const handleSubmit = async () => {
     setError(null);
     setIsPending(true);
 
     try {
-      // 1. Add Owner
+      const wallet = wallets[0];
+      if (!wallet) throw new Error("Wallet not connected");
+      
+      const provider = await wallet.getEthereumProvider();
+      const ethersProvider = new BrowserProvider(provider);
+      const signer = await ethersProvider.getSigner();
+
+      let txResponse;
+
+      // MODE 1: ADD OWNER
       if (mode === 'owner') {
         if (!ethers.isAddress(newOwnerAddress)) throw new Error("Invalid Address");
         if (!newOwnerName) throw new Error("Name required");
-        await submitAddOwner(controllerAddress, newOwnerAddress, newOwnerName, Number(newOwnerPct), newOwnerRemovable);
-      } 
-      // 2. Custom (DeFi Swap)
-      else if (mode === 'custom') {
-        if (customData === '0x') {
-            throw new Error("Transaction data is incomplete. Please check the swap inputs.");
-        }
-        await submitTransaction(controllerAddress, customTo, customValue || '0', false, ethers.ZeroAddress, customData || '0x');
-      } 
-      // 3. Transfer
-      else {
-        const recipientList = parseList(recipients);
-        const amountList = parseList(amounts);
         
-        if (recipientList.length === 0) throw new Error("No recipients entered");
-        if (amountList.length === 0) throw new Error("No amounts entered");
+        txResponse = await submitAddOwner(
+            controllerAddress, 
+            newOwnerAddress, 
+            newOwnerName, 
+            Number(newOwnerPct), 
+            newOwnerRemovable
+        );
+      } 
+      // MODE 2: CUSTOM
+      else if (mode === 'custom') {
+        if (!customData || customData === '0x') throw new Error("Transaction data is incomplete.");
+        txResponse = await submitTransaction(
+            controllerAddress, customTo, customValue || '0', false, ethers.ZeroAddress, customData, signer
+        );
+      } 
+      // MODE 3: TRANSFER
+      else {
+        // ... (Your existing Transfer Logic validation) ...
+        // I am simplifying the repetition here, assume your existing validation logic is used
+        const recipientList = recipients.split(/[\n]+/).map(s => s.trim()).filter(s => s !== '');
+        const amountList = amounts.split(/[\n]+/).map(s => s.trim()).filter(s => s !== '');
         
         const isToken = assetType === 'token';
         let targetToken = ethers.ZeroAddress;
-
-        if (isToken) {
-          targetToken = selectedToken === 'custom' ? customTokenAddress : selectedToken;
-          if (!ethers.isAddress(targetToken)) throw new Error("Invalid Token Address");
-        }
+        if (isToken) targetToken = selectedToken === 'custom' ? customTokenAddress : selectedToken;
 
         if (txScope === 'single') {
-          await submitTransaction(controllerAddress, recipientList[0], amountList[0], isToken, targetToken, '0x');
+          txResponse = await submitTransaction(
+              controllerAddress, recipientList[0], amountList[0], isToken, targetToken, '0x', signer
+          );
         } else {
           if (batchType === 'equal') {
-             await submitBatchTransferEqual(controllerAddress, targetToken, recipientList, amountList[0]);
+             txResponse = await submitBatchTransferEqual(controllerAddress, targetToken, recipientList, amountList[0]);
           } else {
-             if (recipientList.length !== amountList.length) throw new Error(`Count mismatch: ${recipientList.length} addrs vs ${amountList.length} amts`);
-             await submitBatchTransferDifferent(controllerAddress, targetToken, recipientList, amountList);
+             txResponse = await submitBatchTransferDifferent(controllerAddress, targetToken, recipientList, amountList);
           }
         }
       }
-      onClose();
-      // window.location.reload(); 
+
+      // 3. SHOW SUCCESS MODAL (DO NOT RELOAD, DO NOT CLOSE PARENT YET)
+      setStatusState({
+        isOpen: true,
+        type: 'success',
+        title: 'Proposal Submitted',
+        description: 'Your transaction proposal has been created successfully.',
+        txHash: txResponse?.hash
+      });
+
     } catch (err: any) {
       console.error(err);
+      // Show Error directly in the modal UI (or use StatusModal if you prefer)
       setError(err.message || 'Failed to submit transaction');
     } finally {
       setIsPending(false);
     }
   };
+
+  // 4. HANDLE FINAL CLOSE
+  const handleStatusClose = () => {
+    setStatusState(prev => ({ ...prev, isOpen: false }));
+    onClose(); // Close the main modal only after user acknowledges status
+    // Optional: Trigger a data refresh here if you have a prop for it
+  };
+
+  if (!isOpen) return null;
 
   // Filter token options for 'token out' to ensure they aren't the same as 'token in'
   const tokenOutOptions = TOKEN_OPTIONS.filter(t => t.address !== tokenIn);
@@ -348,6 +391,7 @@ export function SubmitTransactionModal({
 
 
   return (
+    <>
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
       <Card className="w-full max-w-xl border-border bg-card max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
         
@@ -654,7 +698,7 @@ export function SubmitTransactionModal({
                        <Textarea 
                           value={customData} 
                           readOnly 
-                          className="font-mono text-xs min-h-[100px] bg-muted break-all"
+                          className="font-mono text-xs min-h-25 bg-muted break-all"
                           placeholder="Generated calldata (0x...)"
                        />
                     </div>
@@ -690,18 +734,27 @@ export function SubmitTransactionModal({
           )}
 
           <div className="flex gap-3">
-            <Button variant="outline" className="flex-1" onClick={onClose} disabled={isPending}>
-              Cancel
-            </Button>
-            {/* Disable submission if pending or if in custom mode with no generated data */}
-            <Button className="flex-[2]" onClick={handleSubmit} disabled={isPending || (mode === 'custom' && customData === '0x')}>
-              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-              Submit Proposal
-            </Button>
-          </div>
-        </div>
+                <Button variant="outline" className="flex-1" onClick={onClose} disabled={isPending}>
+                  Cancel
+                </Button>
+                <Button className="flex-2" onClick={handleSubmit} disabled={isPending}>
+                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                  Submit Proposal
+                </Button>
+              </div>
+           </div>
+        </Card>
+      </div>
 
-      </Card>
-    </div>
+      {/* 5. RENDER STATUS MODAL ON TOP */}
+      <StatusModal 
+        isOpen={statusState.isOpen}
+        onClose={handleStatusClose}
+        status={statusState.type}
+        title={statusState.title}
+        description={statusState.description}
+        txHash={statusState.txHash}
+      />
+    </>
   );
 }

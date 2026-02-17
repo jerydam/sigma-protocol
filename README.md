@@ -2,137 +2,134 @@
 
 **The Sum of Secure Finance.**
 
-Sigma is a next-generation Multisig (Multi-Signature) Wallet factory designed for modern corporate governance. Unlike traditional 1-person-1-vote wallets, Sigma uses **weighted percentage-Celod voting**, allowing companies to mirror their actual equity structure on-chain.
+Sigma is a next-generation Multisig (Multi-Signature) Treasury management protocol. Unlike traditional "1-person-1-vote" wallets, Sigma implements **weighted equity voting**, allowing organizations to mirror their actual corporate cap table on-chain.
 
------
+---
 
 ## 🌟 Why Sigma?
 
-Traditional multisigs treat every owner equally. Sigma recognizes that in a real company, the CEO, CTO, and Investors have different levels of authority.
+Traditional multisigs treat every owner equally, regardless of their stake. Sigma recognizes that in a real company, the CEO, CTO, and Investors hold different levels of authority.
 
-  * **📊 Weighted Governance:** Assign voting power Celod on equity (e.g., CEO has 40%, Investors have 20%).
-  * **⚡ Batch Execution:** Save up to 40% on gas fees by bundling multiple transfers (payroll, vendors) into a single transaction.
-  * **🛡️ Abstracted Security:** Logic and Funds are separated. The **Controller** manages permissions, while a distinct **Vault** holds the assets.
-  * **⏳ Timelocks:** Optional delay periods for sensitive transactions to prevent malicious takeovers.
+* **📊 Weighted Governance:** Assign voting power based on equity (e.g., Lead Developer 30%, Seed Investor 15%).
+* **🛡️ Controller-Wallet Separation:** Logic and Funds are decoupled. The **Controller** manages governance, while the **CompanyWallet** acts as a secure, immutable vault.
+* **⚡ High-Efficiency Batching:** Execute payroll, vendor payments, or token distributions to 50+ recipients in a single on-chain transaction.
+* **⏳ Configurable Guardrails:** Built-in **Timelocks** for high-value transfers and **Expiry Periods** to clear stale proposals.
 
------
+---
 
-## 🚀 Features
+## 🚀 Key Features
 
-  * **Dashboard:** Real-time view of treasury assets, recent activity, and pending proposals.
-  * **Proposal System:** Easy-to-use interface to propose transfers, owner additions, or setting changes.
-  * **Token Support:** Celo and ERC20 token support.
-  * **Mass Payouts:** Upload a CSV or manually input a list of addresses to send funds to 50+ people in one click.
-  * **Dark Mode:** Fully responsive UI with built-in dark mode.
+### 💎 Treasury Intelligence
 
------
+* **Real-time Valuation:** Track the total USD net worth of your treasury across native CELO and ERC20 tokens (cUSD, cEUR, WETH).
+* **Asset Breakdown:** Transparent list of every token held by the multisig with direct links to block explorers.
+
+### 📝 Advanced Proposing
+
+* **Dynamic Proposals:** Propose native transfers, token swaps, or governance changes (adding/removing owners).
+* **CSV Mass Payouts:** Upload payroll lists directly to the dashboard to initiate batch transfers.
+* **DeFi Ready:** Simplified interface for generating swap calldata for Uniswap or Ubeswap.
+
+### 🔐 Security & UX
+
+* **Status Tracking:** Visual countdowns for timelocks and proposal expiration.
+* **Responsive Modals:** User-friendly success/error handling with human-readable blockchain error messages.
+* **Dark Mode:** A sleek, professional interface built for financial operators.
+
+---
+
+## 🏗️ Smart Contract Architecture
+
+Sigma utilizes a modular "Factory" pattern to ensure individual treasuries are isolated and secure.
+
+| Contract | Role | Key Responsibility |
+| --- | --- | --- |
+| **`MultiSigFactory`** | Registry | Deploys Controller/Wallet pairs and maps them to user addresses. |
+| **`MultiSigController`** | Governance | Manages owners, voting weights, and transaction approval logic. |
+| **`CompanyWallet`** | Vault | Holds assets. Only executes calls authorized by its specific Controller. |
+
+---
 
 ## 🛠️ Tech Stack
 
-  * **Frontend:** Next.js 14 (App Router), TypeScript, Tailwind CSS
-  * **UI Components:** Shadcn/UI, Lucide Icons
-  * **Blockchain Interaction:** Ethers.js v6
-  * **Smart Contracts:** Solidity (Factory, Controller, CompanyWallet patterns)
-  * **Network:** Celo Sepolia (Testnet)
+* **Frontend:** Next.js 14 (App Router), TypeScript
+* **Styling:** Tailwind CSS, Shadcn/UI
+* **Web3:** Ethers.js v6, Privy Auth (Safe, seamless wallet connection)
+* **Smart Contracts:** Solidity 0.8.20 (OpenZeppelin standards)
+* **Network:** Celo Sepolia
 
------
+---
 
 ## 🏁 Getting Started
 
-Follow these steps to run the Sigma dashboard locally.
-
 ### Prerequisites
 
-  * Node.js (v18 or higher)
-  * MetaMask (or any Web3 wallet) installed in your browser
-  * Some testnet ETH on Celo Sepolia
+* Node.js v18+
+* MetaMask or a Privy-supported wallet
+* Celo sepolia Testnet funds ([Get Faucet Funds](https://faucet.celo.org/celo-sepolia))
 
-### 1\. Clone the Repository
+### 1. Installation
 
 ```bash
 git clone https://github.com/jerydam/sigma-protocol.git
 cd sigma-protocol
-```
-
-### 2\. Install Dependencies
-
-```bash
 npm install
-# or
-yarn install
+
 ```
 
-### 3\. Configure Environment
+### 2. Environment Setup
 
-Create a `.env.local` file in the root directory:
-
-```bash
-cp .env.example .env.local
-```
-
-Add your deployed Factory Contract address:
+Create a `.env.local` file:
 
 ```env
-NEXT_PUBLIC_FACTORY_ADDRESS="0x..." 
-# (If you don't have one, deploy the Solidity contracts first)
+NEXT_PUBLIC_PRIVY_APP_ID="your_privy_id"
+NEXT_PUBLIC_FACTORY_ADDRESS="0x88D0bc0a224b4C1e6571bc51e2830bCF6BA86A41"
+
 ```
 
-### 4\. Run the Development Server
+### 3. Development
 
 ```bash
 npm run dev
+
 ```
 
-Open [http://localhost:3000](https://www.google.com/search?q=http://localhost:3000) with your browser.
-
------
+---
 
 ## 📖 Usage Guide
 
 ### Creating a Treasury
 
-1.  Click **"Create Treasury"** on the sidebar.
-2.  Name your wallet (e.g., "Acme Corp Treasury").
-3.  Add Owners, their Names, and their **Percentage** of voting power.
-4.  Set the **Required Percentage** (e.g., 51% to pass a vote).
-5.  Click Deploy.
+1. Navigate to **Create Treasury**.
+2. Input Owner addresses and their respective % weights (Total must be ≤ 100%).
+3. Define the **Required Percentage** to pass any proposal.
+4. Set the **Timelock** (Seconds) and **Expiry** (Seconds).
 
-### Sending Funds (Batch)
+### Executing a Batch Transfer
 
-1.  Go to your Multisig Dashboard.
-2.  Click **"New Transfer"**.
-3.  Select **"Send to Many"**.
-4.  Upload a CSV or paste a list of addresses.
-5.  Submit the proposal. Other owners must now sign it to reach the required percentage.
+1. Open your Treasury Dashboard.
+2. Click **New Proposal** → **Send to Many**.
+3. Upload a CSV formatted as `address, amount`.
+4. Once the required owners sign, click **Execute** to process all payments in one go.
 
------
-
-## 🏗️ Smart Contract Architecture
-
-Sigma uses a modular architecture to ensure security and upgradability.
-
-| Contract | Description |
-| :--- | :--- |
-| **MultiSigFactory** | The "Main" contract. It deploys new instances of Controllers and Wallets and tracks them. |
-| **MultiSigController** | Stores the list of owners, percentages, and handles the voting logic. It tells the Wallet when to move funds. |
-| **CompanyWallet** | A dumb "Vault" contract that holds the ETH/Tokens. It only accepts commands from its specific Controller. |
-
------
+---
 
 ## 🤝 Contributing
 
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+We welcome contributions from the community!
 
-1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
+1. Fork the repo.
+2. Create your feature branch (`git checkout -b feature/NewAssetSupport`).
+3. Commit your changes.
+4. Open a Pull Request.
 
------
+---
 
 ## 📄 License
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
------
+---
+
+**Built with Σ by the Sigma Team.**
+

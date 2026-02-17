@@ -1,54 +1,147 @@
-import { ethers, BrowserProvider, Contract } from 'ethers';
+import { ethers, BrowserProvider, Contract, Signer } from 'ethers';
 import {
   MULTISIG_CONTROLLER_ABI,
   COMPANY_WALLET_ABI,
   MULTISIG_FACTORY_ABI,
 } from '@/lib/abi';
 
-// Initialize provider and signer
 let provider: BrowserProvider;
-let signer: ethers.Signer;
+let signer: Signer;
 
-
-
-
-
-export async function initializeProvider() {
-  if (typeof window === 'undefined') return;
-  
-  if (!window.ethereum) {
-    throw new Error('MetaMask not installed');
+export async function initializeProvider(privyWallet: any): Promise<{ provider: BrowserProvider; signer: Signer }> {
+  if (!privyWallet) {
+    throw new Error('No wallet provided for initialization');
   }
-  
-  provider = new BrowserProvider(window.ethereum);
-  signer = await provider.getSigner();
-  return { provider, signer };
-}
 
-export const MULTISIG_FACTORY_ADDRESS = '0x0995C06E2fb2d059F3534608176858406f6bE95F' as const;
+  try {
+    // 1. Get the EIP-1193 provider from Privy
+    const ethereumProvider = await privyWallet.getEthereumProvider();
+    
+    // 2. Initialize Ethers v6 Provider
+    provider = new BrowserProvider(ethereumProvider);
+    
+    // 3. Get the Signer
+    signer = await provider.getSigner();
+    
+    return { provider, signer };
+  } catch (error) {
+    console.error("Failed to initialize provider:", error);
+    throw new Error("Wallet initialization failed");
+  }
+}
+export const MULTISIG_FACTORY_ADDRESS = '0x88D0bc0a224b4C1e6571bc51e2830bCF6BA86A41' as const;
 
 export function getProvider() {
   if (!provider) throw new Error('Provider not initialized');
-  return provider;
+  return provider;  
 }
 
-export function getSigner() {
-  if (!signer) throw new Error('Signer not initialized');
+export function getSigner(): Signer {
+  if (!signer) throw new Error("Signer not initialized. Call initializeProvider first.");
   return signer;
 }
 
-
-
-const getSignedContract = async (contractAddress: string) => {
-  if (!window.ethereum) throw new Error("No crypto wallet found");
-  
-  const provider = new ethers.BrowserProvider(window.ethereum);
-  // CRITICAL FIX: Must use a signer to send transactions
-  const signer = await provider.getSigner();
-  
-  return new ethers.Contract(contractAddress, MULTISIG_CONTROLLER_ABI, signer);
+// Internal helper for write transactions
+const getContractWithSigner = async (address: string, abi: any) => {
+  const s = await getSigner();
+  return new ethers.Contract(address, abi, s);
 };
 
+export async function initializeProviderWithPrivy(privyWallet: any) {
+  if (!privyWallet) throw new Error('No Privy wallet connected');
+
+  // Get the EIP-1193 provider from the Privy wallet
+  const ethereumProvider = await privyWallet.getEthereumProvider();
+  
+  // Initialize Ethers BrowserProvider with Privy's provider
+  provider = new BrowserProvider(ethereumProvider);
+  signer = await provider.getSigner();
+  
+  return { provider, signer };
+}
+
+// web3.ts
+
+export const getSignedContract = async (contractAddress: string, abi: any) => {
+  // 1. Get the current signer (which we initialized via Privy)
+  const signer = getSigner(); 
+  
+  // 2. Attach the signer to the contract
+  // In Ethers v6, the third argument MUST be a signer to send transactions
+  return new ethers.Contract(contractAddress, abi, signer);
+};
+
+// ============================================================================
+// NEW: USER MEMBERSHIP FUNCTIONS
+// ============================================================================
+
+/**
+ * Returns a unique list of all MultiSigs the user created OR is a signer in
+ */
+export async function getUserMultiSigs(userAddress: string) {
+  try {
+    const factory = new Contract(MULTISIG_FACTORY_ADDRESS, MULTISIG_FACTORY_ABI, getProvider());
+    
+    // Fetch both lists in parallel
+    const [created, partOf] = await Promise.all([
+      factory.getControllersByOwner(userAddress),
+      factory.getControllersBySigner(userAddress)
+    ]);
+
+    // Merge and remove duplicates
+    const allUniqueControllers = Array.from(new Set([...created, ...partOf]));
+    
+    // Fetch info (Name/Wallet) for each controller
+    const detailedList = await Promise.all(
+      allUniqueControllers.map(async (address) => {
+        const info = await factory.getMultiSigInfo(address);
+        return {
+          controllerAddress: address,
+          name: info.name,
+          walletAddress: info.wallet,
+          isOwner: created.includes(address)
+        };
+      })
+    );
+
+    return detailedList;
+  } catch (err) {
+    console.error("Error fetching user multisigs:", err);
+    return [];
+  }
+}
+
+// ============================================================================
+// CORE TRANSACTION FUNCTIONS
+// ============================================================================
+
+export const submitBatchTransferEqual = async (
+  controllerAddress: string,
+  token: string,
+  recipients: string[],
+  amountPer: string
+) => {
+  const contract = await getContractWithSigner(controllerAddress, MULTISIG_CONTROLLER_ABI);
+  const amountWei = ethers.parseEther(amountPer || '0');
+  const targetToken = ethers.isAddress(token) ? token : ethers.ZeroAddress;
+
+  const tx = await contract.submitBatchTransferEqual(targetToken, recipients, amountWei);
+  return await tx.wait();
+};
+
+export const submitBatchTransferDifferent = async (
+  controllerAddress: string,
+  token: string,
+  recipients: string[],
+  amounts: string[]
+) => {
+  const contract = await getContractWithSigner(controllerAddress, MULTISIG_CONTROLLER_ABI);
+  const amountsWei = amounts.map((amt) => ethers.parseEther(amt || '0'));
+  const targetToken = ethers.isAddress(token) ? token : ethers.ZeroAddress;
+
+  const tx = await contract.submitBatchTransferDifferent(targetToken, recipients, amountsWei);
+  return await tx.wait();
+};
 /**
  * 1. Submit Single Transaction
  */
@@ -58,11 +151,11 @@ export const submitTransaction = async (
   value: string, // "1.5" ETH
   isToken: boolean,
   tokenAddress: string,
-  data: string
+  data: string,
+  signer: any
 ) => {
   try {
-    const contract = await getSignedContract(controllerAddress);
-    
+    const contract = new ethers.Contract(controllerAddress, MULTISIG_CONTROLLER_ABI, signer);
     // Convert string "1.5" to Wei BigInt
     const valueWei = ethers.parseEther(value || '0');
     
@@ -85,62 +178,6 @@ export const submitTransaction = async (
   }
 };
 
-/**
- * 2. Submit Batch Transfer (Equal Amounts)
- */
-export const submitBatchTransferEqual = async (
-  controllerAddress: string,
-  token: string,
-  recipients: string[],
-  amountPer: string // "1.5"
-) => {
-  try {
-    const contract = await getSignedContract(controllerAddress);
-
-    const amountWei = ethers.parseEther(amountPer || '0');
-    const targetToken = ethers.isAddress(token) ? token : ethers.ZeroAddress;
-
-    const tx = await contract.submitBatchTransferEqual(
-      targetToken,
-      recipients,
-      amountWei
-    );
-
-    return await tx.wait();
-  } catch (error) {
-    console.error("submitBatchTransferEqual Error:", error);
-    throw error;
-  }
-};
-
-/**
- * 3. Submit Batch Transfer (Different Amounts)
- */
-export const submitBatchTransferDifferent = async (
-  controllerAddress: string,
-  token: string,
-  recipients: string[],
-  amounts: string[] // ["1.5", "2.0"]
-) => {
-  try {
-    const contract = await getSignedContract(controllerAddress);
-
-    // Convert array of strings to array of BigInts
-    const amountsWei = amounts.map((amt) => ethers.parseEther(amt || '0'));
-    const targetToken = ethers.isAddress(token) ? token : ethers.ZeroAddress;
-
-    const tx = await contract.submitBatchTransferDifferent(
-      targetToken,
-      recipients,
-      amountsWei
-    );
-
-    return await tx.wait();
-  } catch (error) {
-    console.error("submitBatchTransferDifferent Error:", error);
-    throw error;
-  }
-};
 
 /**
  * 4. Submit Add Owner
@@ -153,7 +190,7 @@ export const submitAddOwner = async (
   removable: boolean
 ) => {
   try {
-    const contract = await getSignedContract(controllerAddress);
+    const contract = await getSignedContract(controllerAddress, MULTISIG_CONTROLLER_ABI);
     
     // Ensure percentage is BigInt (assuming contract uses basis points or integer percentage)
     // If your contract expects 20% as "20", pass 20. 
@@ -193,25 +230,14 @@ export async function getConnectedWalletAddress(controllerAddress: string) {
   }
 }
 
-export async function getWalletBalance(walletAddress: string) {
-  try {
-    const wallet = new Contract(walletAddress, COMPANY_WALLET_ABI, getProvider());
-    const balance = await wallet.getBalance();
-    return ethers.formatEther(balance);
-  } catch (err) {
-    const provider = getProvider();
-    const balance = await provider.getBalance(walletAddress);
-    return ethers.formatEther(balance);
-  }
-}
+
 
 // ============================================================================
 // MULTISIG FACTORY FUNCTIONS
 // ============================================================================
 
 export async function createMultiSig(
-  factoryAddress: string,
-  name: string, // <--- NEW PARAMETER
+  name: string,
   initialOwners: string[],
   initialNames: string[],
   initialPercentages: number[],
@@ -221,22 +247,26 @@ export async function createMultiSig(
   expiryPeriod: number,
   minOwners: number
 ) {
+  // Use the constant MULTISIG_FACTORY_ADDRESS directly
   const factory = new Contract(
-    factoryAddress,
+    MULTISIG_FACTORY_ADDRESS,
     MULTISIG_FACTORY_ABI,
     signer
   );
 
+  // Convert numbers to BigInt for Solidity uint256 compatibility
+  const pcts = initialPercentages.map(p => BigInt(p));
+
   const tx = await factory.createMultiSig(
-    name, // Passed as first argument
+    name,
     initialOwners,
     initialNames,
-    initialPercentages,
+    pcts,
     initialRemovable,
-    requiredPercentage,
-    timelockPeriod,
-    expiryPeriod,
-    minOwners
+    BigInt(requiredPercentage),
+    BigInt(timelockPeriod),
+    BigInt(expiryPeriod),
+    BigInt(minOwners)
   );
 
   const receipt = await tx.wait();
@@ -262,14 +292,46 @@ export async function getDeploymentCount(factoryAddress: string) {
 }
 
 // NEW: Helper to get name and wallet address in one call from Factory
-export async function getMultiSigInfo(factoryAddress: string, controllerAddress: string) {
-  const factory = new Contract(factoryAddress, MULTISIG_FACTORY_ABI, provider);
-  const info = await factory.getMultiSigInfo(controllerAddress);
-  return {
-    name: info.name,
-    wallet: info.wallet,
-    exists: info.exists
-  };
+export async function getMultiSigInfo(controllerAddress: string) {
+  try {
+    // Use provider for read-only calls to be faster/cheaper
+    const factory = new Contract(MULTISIG_FACTORY_ADDRESS, MULTISIG_FACTORY_ABI, getProvider());
+    
+    // Call the updated Solidity function that returns the struct
+    const data = await factory.getMultiSigInfo(controllerAddress);
+    
+    return {
+      name: data.name,
+      controller: data.controller,
+      wallet: data.wallet,
+      ownerCount: Number(data.ownerCount),
+      requiredPercentage: Number(data.requiredPercentage),
+      minOwners: Number(data.minOwners),
+      balance: ethers.formatEther(data.balance), // Convert Wei to Eth string
+      isPaused: data.isPaused
+    };
+  } catch (err) {
+    console.error(`Error fetching info for ${controllerAddress}:`, err);
+    throw err;
+  }
+}
+
+export async function getWalletBalance(walletAddress: string) {
+  const provider = getProvider();
+  const balance = await provider.getBalance(walletAddress);
+  return ethers.formatEther(balance);
+}
+
+export async function getMultisigOwners(controllerAddress: string) {
+  const controller = new Contract(controllerAddress, MULTISIG_CONTROLLER_ABI, getProvider());
+  const [addrs, names, percentages, removable] = await controller.getOwners();
+
+  return addrs.map((addr: string, i: number) => ({
+    address: addr,
+    name: names[i],
+    percentage: percentages[i].toString(),
+    removable: removable[i]
+  }));
 }
 
 // ============================================================================
@@ -283,9 +345,28 @@ export async function confirmTransaction(controllerAddress: string, transactionI
   return await tx.wait();
 }
 
-export async function executeTransactionManual(controllerAddress: string, transactionId: number) {
+export async function executeTransactionManual(
+  controllerAddress: string, 
+  transactionId: number
+) {
+  // Ensure you get the signer! 
+  // (In your previous code you relied on a global signer, ensure it's passed or available)
   const controller = new Contract(controllerAddress, MULTISIG_CONTROLLER_ABI, signer);
-  const tx = await controller.executeTransactionManual(transactionId);
+
+  // 1. Manually estimate gas (or fallback to a high number if estimation fails)
+  let gasLimit;
+  try {
+    const estimate = await controller.executeTransactionManual.estimateGas(transactionId);
+    // Add 20% buffer
+    gasLimit = (estimate * BigInt(120) / BigInt(100));
+  } catch (error) {
+    console.warn("Gas estimation failed, using fallback high limit", error);
+    // Fallback: 2 million gas should cover most batch transfers
+    gasLimit = BigInt(2000000); 
+  }
+
+  // 2. Send transaction with explicit gas limit
+  const tx = await controller.executeTransactionManual(transactionId, { gasLimit });
   return await tx.wait();
 }
 
@@ -294,6 +375,7 @@ export async function revokeConfirmation(controllerAddress: string, transactionI
   const tx = await controller.revokeConfirmation(transactionId);
   return await tx.wait();
 }
+
 
 // ============================================================================
 // MULTISIG GOVERNANCE FUNCTIONS (NEW)
@@ -365,17 +447,7 @@ export async function getTransaction(controllerAddress: string, transactionId: n
   };
 }
 
-export async function getMultisigOwners(controllerAddress: string) {
-  const controller = new Contract(controllerAddress, MULTISIG_CONTROLLER_ABI, provider);
-  const { addrs, ownerName, percentages, removable } = await controller.getOwners();
 
-  return {
-    addresses: addrs,
-    names: ownerName,
-    percentages: percentages.map((p: any) => p.toString()),
-    removables: removable,
-  };
-}
 
 export async function getMultisigConfig(controllerAddress: string) {
   const controller = new Contract(controllerAddress, MULTISIG_CONTROLLER_ABI, provider);
@@ -416,7 +488,8 @@ export async function executeWalletTransaction(
   tokenAddress: string,
   data: string = '0x'
 ) {
-  const wallet = new Contract(walletAddress, COMPANY_WALLET_ABI, signer);
+  const wallet = await getContractWithSigner(walletAddress, COMPANY_WALLET_ABI);
+  // This bypasses the MultiSig and works ONLY if the caller is the 'owner'
   const tx = await wallet.executeTransaction(
     to,
     ethers.parseEther(value),
@@ -433,16 +506,18 @@ export async function confirmTransactionsBatch(
   const controller = new Contract(
     controllerAddress,
     MULTISIG_CONTROLLER_ABI,
-    getSigner()
+    getSigner() // Ensure this returns the connected signer
   );
 
-  // WARNING: This requires your Smart Contract to have a confirmTransactionsBatch function.
-  // If your contract does not support batching, this line will fail at runtime.
-  const tx = await controller.confirmTransactionsBatch(transactionIds);
-  return await tx.wait();
-}
-export async function getTokenBalance(walletAddress: string, tokenAddress: string) {
-  const wallet = new Contract(walletAddress, COMPANY_WALLET_ABI, provider);
-  const balance = await wallet.getTokenBalance(tokenAddress);
-  return balance.toString();
+  // FALLBACK: If contract doesn't have batch support, loop sequentially
+  // NOTE: This is slow and requires N signatures.
+  for (const id of transactionIds) {
+    try {
+      const tx = await controller.confirmTransaction(id);
+      await tx.wait(); // Wait for each to finish before next popup
+    } catch (err) {
+      console.error(`Failed to confirm tx ${id}`, err);
+      // Optional: throw error to stop the loop
+    }
+  }
 }

@@ -11,14 +11,39 @@ export interface Transaction {
   initiator: string;
   to: string;
   value: string;
-  isTokenTransfer: boolean;
-  tokenAddress?: string;
   data: string;
+  isTokenTransfer: boolean;
+  tokenAddress: string;
   executed: boolean;
-  confirmationCount: number;
-  timestamp: number;
-  timelockEnd: number;
-  confirmations: string[];
+  confirmationCount: string;
+  confirmations: string[]; // Fixed: Changed from {} to string[]
+  timestamp: string;
+  timelockEnd: string;
+}
+
+export interface MultiSigOwner {
+  address: string;
+  name: string;
+  percentage: number;
+  removable: boolean;
+}
+
+export interface MultiSig {
+  controller: string;
+  wallet: string;
+  name: string;
+  owners: MultiSigOwner[];
+  balance: string;
+  config: {
+    requiredPercentage: number;
+    paused: boolean;
+    timelockPeriod: number;
+    expiryPeriod: number;
+    minOwners: number;
+  };
+  transactions: Transaction[]; // Added this required property
+  deployed?: number;
+  isCreator?: boolean;
 }
 
 export interface MultisigConfig {
@@ -29,11 +54,3 @@ export interface MultisigConfig {
   paused: boolean;
 }
 
-export interface MultiSig {
-  controller: string;
-  wallet: string;
-  owners: Owner[];
-  config: MultisigConfig;
-  balance: string;
-  deployed: number;
-}
