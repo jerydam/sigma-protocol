@@ -11,7 +11,8 @@ import {
   Loader2,
   Clock,
   Save,
-  RotateCcw
+  RotateCcw,
+  ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWallets } from '@privy-io/react-auth';
@@ -22,7 +23,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { createMultiSig, initializeProvider, initializeProviderWithPrivy } from '@/lib/web3';
+import { Interface } from 'ethers';
+import { MULTISIG_FACTORY_ABI } from '@/lib/abi';
 import { cn } from '@/lib/utils'; // Assuming you have this utility
+import Link from 'next/link';
 
 interface Owner {
   address: string;
@@ -67,7 +71,7 @@ export default function CreateMultisigPage() {
   const [timelockUnit, setTimelockUnit] = useState(3600);
   const [expiryVal, setExpiryVal] = useState(7);
   const [expiryUnit, setExpiryUnit] = useState(86400);
-
+  const [deployedAddress, setDeployedAddress] = useState<string>('');
   // --- PERSISTENCE LOGIC ---
 
   // 1. Load Data on Mount
@@ -211,11 +215,30 @@ export default function CreateMultisigPage() {
         minOwners
       );
 
+      // Parse logs to find the MultiSigCreated event
+      const iface = new Interface(MULTISIG_FACTORY_ABI);
+      let newController = '';
+      
+      for (const log of receipt.logs) {
+        try {
+          const parsedLog = iface.parseLog(log);
+          if (parsedLog && parsedLog.name === 'MultiSigCreated') {
+            newController = parsedLog.args[0]; // 1st arg is 'controller' address
+            break;
+          }
+        } catch (e) {
+          // Ignore logs that don't match the interface
+        }
+      }
+
       setTxHash(receipt.hash);
+      if (newController) {
+        setDeployedAddress(newController);
+      }
       setIsSuccess(true);
-      // Clear draft on success
       localStorage.removeItem(STORAGE_KEY);
     } catch (err: any) {
+      console.error(err);
       setError(err.message || 'Failed to deploy multisig');
     } finally {
       setIsPending(false);
@@ -545,8 +568,7 @@ export default function CreateMultisigPage() {
           </Card>
         )}
 
-        {/* STEP 3 */}
-        {step === 3 && (
+       {step === 3 && (
           <Card className="border-2 border-black dark:border-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] rounded-none bg-transparent">
             <CardHeader className="border-b-2 border-black dark:border-white pb-6">
               <CardTitle className="text-2xl font-black italic uppercase">Manifest & Deploy</CardTitle>
@@ -567,12 +589,26 @@ export default function CreateMultisigPage() {
                     TX: {txHash}
                   </div>
                   
-                  <Button 
-                    className="h-14 px-8 rounded-none border-2 border-black dark:border-white font-black uppercase hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]"
-                    onClick={() => window.location.reload()}
-                  >
-                     Initialize Another
-                  </Button>
+                  {/* 4. Updated Buttons for Success State */}
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    {/* Primary Button: Go to Dashboard */}
+                    <Link href={deployedAddress ? `/multisigs/${deployedAddress}` : '/multisigs'}>
+                      <Button 
+                        className="w-full sm:w-auto h-14 px-8 rounded-none border-2 border-black dark:border-white font-black uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all"
+                      >
+                         Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" />
+                      </Button>
+                    </Link>
+
+                    {/* Secondary Button: Create Another */}
+                    <Button 
+                      variant="outline"
+                      className="w-full sm:w-auto h-14 px-8 rounded-none border-2 border-black dark:border-white font-black uppercase hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black"
+                      onClick={() => window.location.reload()}
+                    >
+                       Initialize Another
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -666,5 +702,6 @@ export default function CreateMultisigPage() {
         )}
       </div>
     </div>
+    
   );
 }

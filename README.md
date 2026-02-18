@@ -91,8 +91,8 @@ Create a `.env.local` file in the root directory:
 
 ```env
 NEXT_PUBLIC_PRIVY_APP_ID="your_privy_id"
-# Current Factory Deployment on Celo Alfajores
-NEXT_PUBLIC_FACTORY_ADDRESS="0x88D0bc0a224b4C1e6571bc51e2830bCF6BA86A41"
+# Current Factory Deployment on Celo Sepolia
+NEXT_PUBLIC_FACTORY_ADDRESS="0x79798892210059Ec0253ADC3Ccb5fC0AFbB228CC"
 
 ```
 

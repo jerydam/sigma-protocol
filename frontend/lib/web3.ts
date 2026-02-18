@@ -29,7 +29,7 @@ export async function initializeProvider(privyWallet: any): Promise<{ provider: 
     throw new Error("Wallet initialization failed");
   }
 }
-export const MULTISIG_FACTORY_ADDRESS = '0x88D0bc0a224b4C1e6571bc51e2830bCF6BA86A41' as const;
+export const MULTISIG_FACTORY_ADDRESS = '0x79798892210059Ec0253ADC3Ccb5fC0AFbB228CC' as const;
 
 export function getProvider() {
   if (!provider) throw new Error('Provider not initialized');

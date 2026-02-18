@@ -1,29 +1,81 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MultiSig } from '@/lib/types';
-import { Copy, Wallet, ShieldCheck, ArrowRight, DollarSign, Users, Activity } from 'lucide-react';
+import { Copy, Wallet, ShieldCheck, ArrowRight, DollarSign, Users, Activity, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { getMultiSigInfo } from '@/lib/web3'; // Import your data fetcher
+
+// Define the structure of the data returned by getMultiSigInfo
+interface MultiSigData {
+  name: string;
+  wallet: string;
+  ownerCount: number;
+  requiredPercentage: number;
+  minOwners: number;
+  balance: string;
+  isPaused: boolean;
+}
 
 interface MultisigCardProps {
-  multisig: MultiSig;
+  // We only need the controller address and creator flag to start fetching
+  multisig: {
+    controller: string;
+    isCreator: boolean;
+    // Optional: initial fallback data if available
+    name?: string;
+  };
 }
 
 export function MultisigCard({ multisig }: MultisigCardProps) {
+  const [data, setData] = useState<MultiSigData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch real data on mount
+  useEffect(() => {
+    let isMounted = true;
+    const fetchData = async () => {
+      try {
+        const info = await getMultiSigInfo(multisig.controller);
+        if (isMounted) {
+          setData(info);
+        }
+      } catch (err) {
+        console.error("Failed to load multisig data", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    fetchData();
+    return () => { isMounted = false; };
+  }, [multisig.controller]);
+
   const handleCopy = (e: React.MouseEvent, text: string) => {
     e.preventDefault(); 
     navigator.clipboard.writeText(text);
   };
 
-  // Format balance as USD currency
+  // 1. Loading State
+  if (loading) {
+    return (
+      <Card className="h-75 border-2 border-black dark:border-white rounded-none flex items-center justify-center bg-white dark:bg-[#080808]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </Card>
+    );
+  }
+
+  // 2. Error/Empty State Fallback
+  if (!data) return null;
+
+  // Format balance as USD currency (Mocking conversion rate 1 CELO = $1 USD for simplicity, or just showing the raw value)
   const formattedBalance = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(parseFloat(multisig.balance || '0'));
+  }).format(parseFloat(data.balance || '0'));
 
   return (
     <Card className="group border-2 border-black dark:border-white rounded-none bg-white dark:bg-[#080808] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] transition-all duration-200 flex flex-col h-full relative overflow-hidden">
@@ -39,8 +91,8 @@ export function MultisigCard({ multisig }: MultisigCardProps) {
       <CardHeader className="pb-4 pt-10 border-b-2 border-black dark:border-white">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <h3 className="font-black italic uppercase text-xl truncate tracking-tighter" title={multisig.name}>
-              {multisig.name || 'UNNAMED TREASURY'}
+            <h3 className="font-black italic uppercase text-xl truncate tracking-tighter" title={data.name}>
+              {data.name || 'UNNAMED TREASURY'}
             </h3>
             <div className="flex items-center gap-2 mt-2">
               <div 
@@ -58,18 +110,18 @@ export function MultisigCard({ multisig }: MultisigCardProps) {
           <Badge 
             variant="outline" 
             className={`rounded-none border-2 font-bold uppercase tracking-widest px-2 py-1 text-[10px] ${
-                multisig.config.paused 
+                data.isPaused 
                 ? 'border-red-500 text-red-500 bg-red-500/10' 
                 : 'border-emerald-500 text-emerald-500 bg-emerald-500/10'
             }`}
           >
-            {multisig.config.paused ? 'HALTED' : 'ACTIVE'}
+            {data.isPaused ? 'HALTED' : 'ACTIVE'}
           </Badge>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-6 flex-1 flex flex-col p-6">
-        {/* Balance Section - Updated to USD */}
+        {/* Balance Section */}
         <div className="flex items-center gap-4">
            <div className="h-12 w-12 border-2 border-black dark:border-white flex items-center justify-center bg-black dark:bg-white text-white dark:text-black">
               <DollarSign className="h-6 w-6" />
@@ -88,40 +140,32 @@ export function MultisigCard({ multisig }: MultisigCardProps) {
             <p className="text-[10px] font-black uppercase opacity-50 mb-1 flex items-center gap-1">
               <Users className="h-3 w-3" /> Owners
             </p>
-            <p className="text-xl font-black">{multisig.owners.length}</p>
+            <p className="text-xl font-black">{data.ownerCount}</p>
           </div>
           <div>
             <p className="text-[10px] font-black uppercase opacity-50 mb-1 flex items-center gap-1">
               <Activity className="h-3 w-3" /> Threshold
             </p>
-            <p className="text-xl font-black">{multisig.config.requiredPercentage}%</p>
+            <p className="text-xl font-black">{data.requiredPercentage}%</p>
           </div>
         </div>
 
-        {/* Equity Distribution Bar (Real Data) */}
+        {/* Cap Table Bar (Simplified Visual) */}
+        {/* Since getMultiSigInfo returns aggregate data (ownerCount), we simulate the bar visually or fetch owners separately if detailed breakdown is needed. 
+            For the dashboard card, a generic bar representing filled capacity is sufficient. */}
         <div className="space-y-2">
           <div className="flex justify-between text-[10px] font-black uppercase tracking-wider opacity-60">
              <span>Cap Table</span>
              <span>100%</span>
           </div>
-          <div className="h-3 border-2 border-black dark:border-white flex w-full">
-            {multisig.owners.map((owner, idx) => (
-              <div
-                key={`${multisig.controller}-owner-${idx}`}
-                style={{
-                  width: `${owner.percentage}%`,
-                  backgroundColor: [
-                    '#2563EB', // Blue
-                    '#DB2777', // Pink
-                    '#059669', // Emerald
-                    '#D97706', // Amber
-                    '#7C3AED', // Violet
-                  ][idx % 5],
-                }}
-                className="h-full border-r border-black/20 dark:border-white/20 last:border-0 hover:opacity-80 transition-opacity"
-                title={`${owner.name}: ${owner.percentage}%`}
-              />
-            ))}
+          <div className="h-3 border-2 border-black dark:border-white flex w-full bg-black/5 dark:bg-white/5">
+             {/* Render simplified segments based on owner count */}
+             {Array.from({ length: Math.min(data.ownerCount, 5) }).map((_, i) => (
+                <div 
+                  key={i} 
+                  className="h-full border-r border-black/20 dark:border-white/20 flex-1 bg-black/20 dark:bg-white/20 last:border-0"
+                />
+             ))}
           </div>
         </div>
 

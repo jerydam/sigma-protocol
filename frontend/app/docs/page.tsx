@@ -3,19 +3,23 @@
 import { useState } from 'react';
 import { 
   BookOpen, ShieldCheck, Zap, Layers, 
-  Code2, Users, Info, AlertTriangle, Clock, Hourglass, FileText, Download, Terminal
+  Code2, Users, Info, AlertTriangle, Clock, Hourglass, 
+  FileText, Download, Terminal, PlayCircle, Lock, Coins, Map
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button'; // Ensure you have this imported
+import { Button } from '@/components/ui/button'; 
 
+// Updated Sidebar Sections
 const DOCS_SECTIONS = [
   { id: 'intro', title: 'Introduction', icon: Info },
+  { id: 'quickstart', title: 'Quick Start Guide', icon: PlayCircle }, // NEW
   { id: 'architecture', title: 'Architecture', icon: Layers },
   { id: 'governance', title: 'Weighted Governance', icon: Users },
+  { id: 'assets', title: 'Supported Assets', icon: Coins }, // NEW
   { id: 'batch', title: 'Batch Operations', icon: Zap },
-  { id: 'guardrails', title: 'Timelocks & Expiry', icon: ShieldCheck },
+  { id: 'guardrails', title: 'Security Guardrails', icon: ShieldCheck },
+  { id: 'contracts', title: 'Contract Addresses', icon: Map }, // NEW
   { id: 'api', title: 'Developer API', icon: Code2 },
   { id: 'troubleshooting', title: 'Troubleshooting', icon: AlertTriangle },
 ];
@@ -47,14 +51,14 @@ export default function DocsPage() {
   return (
     <div className="flex h-[calc(100vh-80px)] overflow-hidden bg-white dark:bg-[#080808] text-black dark:text-white">
       
-      {/* Sidebar Navigation - Fixed/Sticky with Neo-Brutalist Border */}
+      {/* Sidebar Navigation */}
       <aside className="w-72 hidden md:flex shrink-0 border-r-2 border-black dark:border-white bg-white dark:bg-[#080808] flex-col">
         <div className="p-6 border-b-2 border-black dark:border-white">
           <h3 className="font-black italic uppercase text-xl flex items-center gap-2">
             <BookOpen className="h-6 w-6" /> Documentation
           </h3>
           <p className="text-[10px] font-mono mt-2 opacity-60 uppercase tracking-widest">
-            Protocol Manual v1.0
+            Protocol Manual v1.2
           </p>
         </div>
         <ScrollArea className="flex-1 py-6 px-4">
@@ -85,7 +89,7 @@ export default function DocsPage() {
             {/* 1. INTRODUCTION */}
             <section id="intro" className="scroll-mt-8 space-y-6">
               <div className="inline-block border-2 border-black dark:border-white px-3 py-1 font-mono text-xs font-bold uppercase">
-                Alpha Release v1.0.0
+                Stable Release v1.0.0
               </div>
               <h1 className="text-5xl md:text-6xl font-black italic uppercase tracking-tighter leading-none">
                 The Sum of <br/><span className="text-primary">Secure Finance</span>
@@ -99,7 +103,37 @@ export default function DocsPage() {
 
             <div className="h-px bg-black/10 dark:bg-white/10 w-full" />
 
-            {/* 2. ARCHITECTURE */}
+            {/* 2. QUICK START (NEW) */}
+            <section id="quickstart" className="scroll-mt-8 space-y-8">
+              <h2 className="text-3xl font-black italic uppercase flex items-center gap-3">
+                <PlayCircle className="h-8 w-8 text-primary" /> Quick Start Guide
+              </h2>
+              <div className="space-y-4">
+                 <div className="flex gap-4 p-4 border-2 border-black dark:border-white">
+                    <div className="h-8 w-8 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold text-lg shrink-0">1</div>
+                    <div>
+                       <h3 className="font-bold uppercase text-lg">Define Owners</h3>
+                       <p className="text-sm text-muted-foreground">Gather the wallet addresses of your board members. Decide on their equity percentage (e.g., CEO: 40%, CTO: 30%, Investor: 30%).</p>
+                    </div>
+                 </div>
+                 <div className="flex gap-4 p-4 border-2 border-black dark:border-white">
+                    <div className="h-8 w-8 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold text-lg shrink-0">2</div>
+                    <div>
+                       <h3 className="font-bold uppercase text-lg">Set Thresholds</h3>
+                       <p className="text-sm text-muted-foreground">Choose a <strong>Required Percentage</strong> (e.g., 51%). This means funds can only move if owners holding at least 51% of equity sign the transaction.</p>
+                    </div>
+                 </div>
+                 <div className="flex gap-4 p-4 border-2 border-black dark:border-white">
+                    <div className="h-8 w-8 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold text-lg shrink-0">3</div>
+                    <div>
+                       <h3 className="font-bold uppercase text-lg">Deploy Treasury</h3>
+                       <p className="text-sm text-muted-foreground">Click "Create Treasury". This deploys two contracts: your **Governance Controller** and your **Asset Vault**. Creator Address can't be part of the signer.</p>
+                    </div>
+                 </div>
+              </div>
+            </section>
+
+            {/* 3. ARCHITECTURE */}
             <section id="architecture" className="scroll-mt-8 space-y-8">
               <h2 className="text-3xl font-black italic uppercase flex items-center gap-3">
                 <Layers className="h-8 w-8 text-primary" /> Modular Architecture
@@ -121,7 +155,7 @@ export default function DocsPage() {
               </div>
             </section>
 
-            {/* 3. WEIGHTED GOVERNANCE */}
+            {/* 4. WEIGHTED GOVERNANCE */}
             <section id="governance" className="scroll-mt-8 space-y-8">
               <h2 className="text-3xl font-black italic uppercase flex items-center gap-3">
                 <Users className="h-8 w-8 text-primary" /> Weighted Governance
@@ -150,7 +184,37 @@ export default function DocsPage() {
               </div>
             </section>
 
-            {/* 4. BATCH OPERATIONS */}
+            {/* 5. SUPPORTED ASSETS (NEW) */}
+            <section id="assets" className="scroll-mt-8 space-y-8">
+               <h2 className="text-3xl font-black italic uppercase flex items-center gap-3">
+                <Coins className="h-8 w-8 text-primary" /> Supported Assets
+              </h2>
+              <div className="grid md:grid-cols-2 gap-6">
+                 <div className="border-2 border-black dark:border-white p-6">
+                    <h4 className="font-black uppercase mb-2">Native Currency</h4>
+                    <p className="text-sm text-muted-foreground mb-4">
+                       Full support for native gas tokens. This is used to pay for transaction fees and direct transfers.
+                    </p>
+                    <div className="flex gap-2">
+                       <Badge className="rounded-none border-black dark:border-white bg-amber-500 hover:bg-amber-600 text-white">CELO</Badge>
+                       <Badge className="rounded-none border-black dark:border-white bg-slate-500 hover:bg-slate-600 text-white">ETH</Badge>
+                    </div>
+                 </div>
+                 <div className="border-2 border-black dark:border-white p-6">
+                    <h4 className="font-black uppercase mb-2">ERC-20 Tokens</h4>
+                    <p className="text-sm text-muted-foreground mb-4">
+                       Compatible with all standard ERC-20 tokens, including stablecoins and governance tokens.
+                    </p>
+                    <div className="flex gap-2">
+                       <Badge className="rounded-none border-black dark:border-white bg-green-500 hover:bg-green-600 text-white">cUSD</Badge>
+                       <Badge className="rounded-none border-black dark:border-white bg-blue-500 hover:bg-blue-600 text-white">cEUR</Badge>
+                       <Badge className="rounded-none border-black dark:border-white bg-purple-500 hover:bg-purple-600 text-white">WETH</Badge>
+                    </div>
+                 </div>
+              </div>
+            </section>
+
+            {/* 6. BATCH OPERATIONS */}
             <section id="batch" className="scroll-mt-8 space-y-8">
               <h2 className="text-3xl font-black italic uppercase flex items-center gap-3">
                 <Zap className="h-8 w-8 text-primary" /> Batch Operations
@@ -185,11 +249,25 @@ export default function DocsPage() {
               </div>
             </section>
 
-            {/* 5. GUARDRAILS */}
+            {/* 7. GUARDRAILS & SECURITY */}
             <section id="guardrails" className="scroll-mt-8 space-y-8">
               <h2 className="text-3xl font-black italic uppercase flex items-center gap-3">
-                <ShieldCheck className="h-8 w-8 text-primary" /> Guardrails
+                <ShieldCheck className="h-8 w-8 text-primary" /> Security Guardrails
               </h2>
+              
+              {/* Best Practices Box */}
+              <div className="p-6 bg-red-500/5 border-2 border-red-500">
+                 <h4 className="font-black uppercase text-red-600 flex items-center gap-2 mb-2">
+                    <Lock className="h-5 w-5" /> Security Best Practices
+                 </h4>
+                 <ul className="list-disc list-inside text-sm space-y-2 text-red-700/80 font-medium">
+                    <li>Always verify the <strong>Contract Address</strong> before sending funds.</li>
+                    <li>Rotate owners immediately if a private key is suspected compromised.</li>
+                    <li>Use a <strong>Timelock</strong> of at least 24 hours for treasuries holding significant value.</li>
+                    <li>Incase of suspicious Activity, Creator can Pause the Contract</li>
+                 </ul>
+              </div>
+
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="border-2 border-black dark:border-white p-6">
                     <div className="mb-4 bg-primary/10 w-fit p-3 border-2 border-primary">
@@ -212,7 +290,33 @@ export default function DocsPage() {
               </div>
             </section>
 
-            {/* 6. DEVELOPER API */}
+            {/* 8. CONTRACT ADDRESSES (NEW) */}
+            <section id="contracts" className="scroll-mt-8 space-y-8">
+               <h2 className="text-3xl font-black italic uppercase flex items-center gap-3">
+                <Map className="h-8 w-8 text-primary" /> Deployed Contracts
+              </h2>
+              <div className="border-2 border-black dark:border-white overflow-hidden">
+                 <table className="w-full text-sm text-left">
+                    <thead className="bg-black dark:bg-white text-white dark:text-black font-black uppercase">
+                       <tr>
+                          <th className="px-6 py-3">Network</th>
+                          <th className="px-6 py-3">Contract Name</th>
+                          <th className="px-6 py-3">Address</th>
+                       </tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/10 dark:divide-white/10 font-mono">
+                       <tr className="bg-muted/10">
+                          <td className="px-6 py-4 font-bold">Celo Sepolia</td>
+                          <td className="px-6 py-4">MultiSigFactory</td>
+                          <td className="px-6 py-4">0x79798...228CC</td>
+                       </tr>
+                       {/* Add more rows here as you deploy to other networks */}
+                    </tbody>
+                 </table>
+              </div>
+            </section>
+
+            {/* 9. DEVELOPER API */}
             <section id="api" className="scroll-mt-8 space-y-8">
                <h2 className="text-3xl font-black italic uppercase flex items-center gap-3">
                 <Code2 className="h-8 w-8 text-primary" /> Developer API
@@ -231,7 +335,7 @@ await contract.executeTransactionManual(txId, { gasLimit });`}</pre>
               </div>
             </section>
 
-            {/* 7. TROUBLESHOOTING */}
+            {/* 10. TROUBLESHOOTING */}
             <section id="troubleshooting" className="scroll-mt-8 space-y-8">
               <h2 className="text-3xl font-black italic uppercase flex items-center gap-3 text-orange-600">
                 <AlertTriangle className="h-8 w-8" /> Troubleshooting
@@ -251,10 +355,10 @@ await contract.executeTransactionManual(txId, { gasLimit });`}</pre>
                     <div className="h-px bg-orange-500/20 w-full" />
                     <div>
                       <h4 className="font-black uppercase text-orange-700 flex items-center gap-2 mb-2">
-                        <Terminal className="h-4 w-4" /> Error: "Internal JSON-RPC error"
+                        <Terminal className="h-4 w-4" /> Error: "Gas Estimation Failed"
                       </h4>
                       <p className="text-sm text-orange-800/80 pl-6 leading-relaxed">
-                        Often caused by an outdated provider state. Try refreshing your dashboard or disconnecting and reconnecting your wallet.
+                        This usually means the transaction will revert. Check if the <strong>Timelock Period</strong> has passed or if the proposal has already expired.
                       </p>
                     </div>
                   </div>
@@ -264,6 +368,7 @@ await contract.executeTransactionManual(txId, { gasLimit });`}</pre>
           </div>
         </ScrollArea>
       </main>
+      
     </div>
   );
 }

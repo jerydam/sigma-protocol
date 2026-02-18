@@ -165,10 +165,10 @@ export default function LandingPage() {
           Weighted equity governance and automated treasury operations for the next generation of Celo-native organizations.
         </p>
         <div className="flex gap-4">
-          <Link href="https://github.com" className="p-2 border-2 border-black dark:border-white hover:bg-primary hover:text-white transition-all">
+          <Link href="https://github.com/jerydam" className="p-2 border-2 border-black dark:border-white hover:bg-primary hover:text-white transition-all">
             <Github className="h-5 w-5" />
           </Link>
-          <Link href="https://twitter.com" className="p-2 border-2 border-black dark:border-white hover:bg-primary hover:text-white transition-all">
+          <Link href="https://x.com/jerydam00" className="p-2 border-2 border-black dark:border-white hover:bg-primary hover:text-white transition-all">
             <Twitter className="h-5 w-5" />
           </Link>
         </div>
@@ -196,8 +196,8 @@ export default function LandingPage() {
           title="Ecosystem" 
           links={[
             { label: 'Celo Foundation', href: 'https://celo.org' },
-            { label: 'Alfajores Faucet', href: 'https://faucet.celo.org' },
-            { label: 'CeloScan', href: 'https://celoscan.io' },
+            { label: 'Sepolia Faucet', href: 'https://faucet.celo.org/celo-sepolia' },
+            { label: 'CeloScan', href: 'https://sepolia.celoscan.io/' },
           ]} 
         />
       </div>

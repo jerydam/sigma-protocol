@@ -268,6 +268,7 @@ export default function MultisigDetailPage() {
          onClose={() => setIsBatchModalOpen(false)} 
          multisig={multisig}
       />
+      
     </div>
   );
 }
