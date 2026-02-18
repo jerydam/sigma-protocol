@@ -1,10 +1,10 @@
 {
   "name": "sigma-protocol",
   "version": "0.1.0",
-  "private":"true",
+  "private": "true",
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack", 
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "next lint"
   },
@@ -49,7 +49,7 @@
     "ethers": "6.15.0",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
-    "next": "16.0.3",
+    "next": "14.2.35",
     "next-themes": "^0.4.6",
     "react": "19.2.0",
     "react-day-picker": "9.8.0",
