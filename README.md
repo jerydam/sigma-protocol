@@ -2,61 +2,69 @@
 
 **The Sum of Secure Finance.**
 
-Sigma is a next-generation Multisig (Multi-Signature) Treasury management protocol. Unlike traditional "1-person-1-vote" wallets, Sigma implements **weighted equity voting**, allowing organizations to mirror their actual corporate cap table on-chain.
+Sigma Protocol is a next-generation digital treasury management system designed for on-chain organizations. It replaces the chaos of shared private keys with a structured, **Weighted Governance** layer, ensuring funds only move when the right people—holding the right amount of stake—agree.
 
 ---
 
-## 🌟 Why Sigma?
+## 📖 Executive Summary
 
-Traditional multisigs treat every owner equally, regardless of their stake. Sigma recognizes that in a real company, the CEO, CTO, and Investors hold different levels of authority.
+Think of Sigma as a corporate bank account that lives on the blockchain, but with much smarter, programmable rules. unlike a personal crypto wallet where one person holds the key, Sigma is a **Multi-Signature (Multisig) Vault**.
 
-* **📊 Weighted Governance:** Assign voting power based on equity (e.g., Lead Developer 30%, Seed Investor 15%).
-* **🛡️ Controller-Wallet Separation:** Logic and Funds are decoupled. The **Controller** manages governance, while the **CompanyWallet** acts as a secure, immutable vault.
-* **⚡ High-Efficiency Batching:** Execute payroll, vendor payments, or token distributions to 50+ recipients in a single on-chain transaction.
-* **⏳ Configurable Guardrails:** Built-in **Timelocks** for high-value transfers and **Expiry Periods** to clear stale proposals.
+Most existing blockchain tools operate on a "1-Person-1-Vote" basis. If you have 3 partners, everyone has equal power, regardless of ownership. **Sigma changes this.** It aligns your on-chain financial controls with your real-world equity structure.
+
+### The "Weighted Governance" Solution
+
+**Scenario:** If the CEO owns 60% of the company and two junior partners own 20% each, the CEO’s digital signature carries more weight.
+**The Result:** You can set a "Threshold" (e.g., 51% approval) to move funds. The CEO could approve it alone, or the two junior partners combined could fail to approve it without a third vote. This mirrors how actual corporate boards operate.
 
 ---
 
 ## 🚀 Key Features
 
-### 💎 Treasury Intelligence
+### 1. Weighted Equity Voting
+
+Assign voting power based on actual stake (e.g., Lead Developer 30%, Seed Investor 15%) rather than a flat count. The protocol calculates the *sum of equity* to validate transactions.
+
+### 2. High-Efficiency Batch Operations (Payroll)
+
+Sending 50 separate transactions to pay employees or distribute dividends is slow and expensive.
+
+* **The Solution:** Upload a simple CSV spreadsheet (`address, amount`).
+* **The Benefit:** Sigma bundles these into a single on-chain transaction. One approval signature pays the entire company instantly.
+
+### 3. Safety Guardrails
+
+To prevent mistakes or malicious acts, Sigma includes "financial brakes":
+
+* **Timelocks:** Force a delay (e.g., 24 hours) after approval before money moves. This gives the team time to cancel a transaction if a mistake is spotted or a key is compromised.
+* **Expiry:** Proposals don't sit around forever. If a request isn't approved within a set time (e.g., 7 days), it automatically expires.
+
+### 4. Treasury Intelligence
 
 * **Real-time Valuation:** Track the total USD net worth of your treasury across native CELO and ERC20 tokens (cUSD, cEUR, WETH).
-* **Asset Breakdown:** Transparent list of every token held by the multisig with direct links to block explorers.
-
-### 📝 Advanced Proposing
-
-* **Dynamic Proposals:** Propose native transfers, token swaps, or governance changes (adding/removing owners).
-* **CSV Mass Payouts:** Upload payroll lists directly to the dashboard to initiate batch transfers.
 * **DeFi Ready:** Simplified interface for generating swap calldata for Uniswap or Ubeswap.
-
-### 🔐 Security & UX
-
-* **Status Tracking:** Visual countdowns for timelocks and proposal expiration.
-* **Responsive Modals:** User-friendly success/error handling with human-readable blockchain error messages.
-* **Dark Mode:** A sleek, professional interface built for financial operators.
 
 ---
 
-## 🏗️ Smart Contract Architecture
+## 🏗️ Architecture
 
-Sigma utilizes a modular "Factory" pattern to ensure individual treasuries are isolated and secure.
+Sigma utilizes a modular "Factory" pattern to ensure individual treasuries are isolated and secure. The system separates **Custody** (holding money) from **Governance** (deciding how to spend it).
 
-| Contract | Role | Key Responsibility |
-| --- | --- | --- |
-| **`MultiSigFactory`** | Registry | Deploys Controller/Wallet pairs and maps them to user addresses. |
-| **`MultiSigController`** | Governance | Manages owners, voting weights, and transaction approval logic. |
-| **`CompanyWallet`** | Vault | Holds assets. Only executes calls authorized by its specific Controller. |
+| Component | Contract Name | Role | Description |
+| --- | --- | --- | --- |
+| **The Registry** | `MultiSigFactory` | **Deployer** | Deploys Controller/Wallet pairs and maps them to user addresses. |
+| **The Brain** | `MultiSigController` | **Governance** | The logic layer. It tracks owners, weights, counts votes, and enforces timelocks. |
+| **The Vault** | `CompanyWallet` | **Custody** | The secure box. It holds the assets. It is "dumb" and only executes calls authorized by its specific Controller. |
 
 ---
 
 ## 🛠️ Tech Stack
 
 * **Frontend:** Next.js 14 (App Router), TypeScript
-* **Styling:** Tailwind CSS, Shadcn/UI
+* **Styling:** Tailwind CSS, Shadcn/UI (Neo-Brutalist Design System)
 * **Web3:** Ethers.js v6, Privy Auth (Safe, seamless wallet connection)
 * **Smart Contracts:** Solidity 0.8.20 (OpenZeppelin standards)
-* **Network:** Celo Sepolia
+* **Network:** Celo Sepolia (Testnet) / Celo Mainnet
 
 ---
 
@@ -66,7 +74,7 @@ Sigma utilizes a modular "Factory" pattern to ensure individual treasuries are i
 
 * Node.js v18+
 * MetaMask or a Privy-supported wallet
-* Celo sepolia Testnet funds ([Get Faucet Funds](https://faucet.celo.org/celo-sepolia))
+* Celo Sepolia Testnet funds ([Get Faucet Funds]())
 
 ### 1. Installation
 
@@ -79,20 +87,23 @@ npm install
 
 ### 2. Environment Setup
 
-Create a `.env.local` file:
+Create a `.env.local` file in the root directory:
 
 ```env
 NEXT_PUBLIC_PRIVY_APP_ID="your_privy_id"
+# Current Factory Deployment on Celo Alfajores
 NEXT_PUBLIC_FACTORY_ADDRESS="0x88D0bc0a224b4C1e6571bc51e2830bCF6BA86A41"
 
 ```
 
-### 3. Development
+### 3. Run Development Server
 
 ```bash
 npm run dev
 
 ```
+
+Open [http://localhost:3000]() with your browser to see the result.
 
 ---
 
@@ -110,13 +121,13 @@ npm run dev
 1. Open your Treasury Dashboard.
 2. Click **New Proposal** → **Send to Many**.
 3. Upload a CSV formatted as `address, amount`.
-4. Once the required owners sign, click **Execute** to process all payments in one go.
+4. Once the required owners sign (meeting the % threshold), click **Execute** to process all payments in one go.
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions from the community!
+We welcome contributions from the community to help make decentralized finance safer for organizations.
 
 1. Fork the repo.
 2. Create your feature branch (`git checkout -b feature/NewAssetSupport`).
@@ -132,4 +143,3 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ---
 
 **Built with Σ by the Sigma Team.**
-
